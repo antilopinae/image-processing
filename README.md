@@ -36,7 +36,7 @@
 
 ## Usage
 
-### Common format:
+### General format:
 
 ```bash
 ./image-processing <LAB_COMMAND> <SUBCOMMAND> [OPTIONS...]
@@ -123,8 +123,10 @@ Print lab1:
 ./image-processing lab1 --help
 ```
 
-Print lab2:
+Print lab1 blend:
 
 ```bash
 ./image-processing lab1 blend --help
 ```
+
+And others...
