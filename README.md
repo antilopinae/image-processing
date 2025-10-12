@@ -24,6 +24,7 @@
    The `build.sh` script automates this process
    ```bash
    ./build.sh
+   cd build
    ```
    Alternatively, you can run the commands manually:
    ```bash
@@ -32,6 +33,7 @@
 
    # Build the project
    cmake --build build -j$(nproc)
+   cd build
    ```
 
 ## Usage
