@@ -3,36 +3,36 @@ Language: Cpp
 ColumnLimit: 130
 
 BraceWrapping:
- # class definition behind
- AfterClass: false
- # After the control statement
- AfterControlStatement: true
- # enum definition behind
- AfterEnum: false
- # After the function definition
- AfterFunction: false
- # After the namespace definition
- AfterNamespace: false
- # ObjC definition behind
- AfterObjCDeclaration: false
- # struct definition behind
- AfterStruct: false
- # union definition
- AfterUnion: false
- #ExternBlock definition behind
- AfterExternBlock: false
- # before catch
- BeforeCatch: false
- # else before
- BeforeElse: true
- # Indented braces
- IndentBraces: true
- # Split empty function
- SplitEmptyFunction: true
- # Split empty records
- SplitEmptyRecord: true
- # Split empty namespace
- SplitEmptyNamespace: true
+  # class definition behind
+  AfterClass: false
+  # After the control statement
+  AfterControlStatement: true
+  # enum definition behind
+  AfterEnum: false
+  # After the function definition
+  AfterFunction: false
+  # After the namespace definition
+  AfterNamespace: false
+  # ObjC definition behind
+  AfterObjCDeclaration: false
+  # struct definition behind
+  AfterStruct: false
+  # union definition
+  AfterUnion: false
+  #ExternBlock definition behind
+  AfterExternBlock: false
+  # before catch
+  BeforeCatch: false
+  # else before
+  BeforeElse: true
+  # Indented braces
+  IndentBraces: true
+  # Split empty function
+  SplitEmptyFunction: true
+  # Split empty records
+  SplitEmptyRecord: true
+  # Split empty namespace
+  SplitEmptyNamespace: true
 
 # Add a space after @property, \@property (readonly) instead of \@property(readonly).
 ObjCSpaceAfterProperty: true

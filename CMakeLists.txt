@@ -37,11 +37,14 @@ find_package(PNG REQUIRED)
 # pkg_check_modules(LIBBPF REQUIRED IMPORTED_TARGET libbpf)
 
 # main executable
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME}
+        src/main.cpp
+        src/lab1.cpp
+        src/lab2.cpp
+)
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_BINARY_DIR}
-        ${CMAKE_SOURCE_DIR}/src/include
+target_include_directories(${PROJECT_NAME} PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
 )
 
 target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ -static)
