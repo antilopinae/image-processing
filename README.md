@@ -89,16 +89,6 @@ Performs byte-by-byte mixing of two 8 bpp PNG images, using the third image as t
 * `--input-alpha` — input image with alpha (PNG, 8 bpp)
 * `-o`, `--output` — output filepath to PNG-file
 
-Example of usage:
-
-```bash
-./image-processing lab1 blend \
-  --input-first image1.png \
-  --input-second image2.png \
-  --input-alpha mask.png \
-  -o blended.png
-```
-
 ---
 
 ### Lab 2 — `lab2`
