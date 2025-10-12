@@ -16,8 +16,8 @@
 
 1. **Clone the repository with submodules:**
    ```bash
-   git clone --recursive <your_repository_url>
-   cd <project_folder_name>
+   git clone --recursive https://github.com/antilopinae/image-processing
+   cd image-processing
    ```
 
 2. **Configure and build the project:**
