@@ -51,10 +51,13 @@ int main(int argc, char *argv[]) {
     command_lab1.add_subparser(command_lab1_blending);
     parser.add_subparser(command_lab1);
 
+    uint8_t n_levels;
+
     argparse::ArgumentParser command_lab2("lab2");
-    command_lab2.add_description("[unimplemented]");
+    command_lab2.add_description("starts Floyd-Stenberg algorithm");
     AddInputArgument(command_lab2, input_first);
     AddOutputArgument(command_lab2, output);
+    command_lab2.add_argument("-n", "--n-levels").required().store_into(n_levels).help("set level for scattering");
 
     parser.add_subparser(command_lab2);
 
@@ -84,7 +87,11 @@ int main(int argc, char *argv[]) {
                 };
             }
         } else if (parser.is_subcommand_used(command_lab2)) {
-            return Laboratory2{};
+            return Laboratory2{
+                .input_filename = input_first,
+                .output_filename = output,
+                .n_levels = n_levels
+            };
         }
 
         return std::nullopt;
@@ -146,12 +153,28 @@ int main(int argc, char *argv[]) {
             return {};
         },
         [](const Laboratory2 &c) -> std::expected<void, boost::system::error_code> {
-            fmt::print("Unimplemented!\n");
-            return std::unexpected{
-                boost::system::errc::make_error_code(
-                    boost::system::errc::not_supported
-                )
-            };
+            auto image = ReadImage(c.input_filename);
+
+            if (!image) {
+                return std::unexpected{image.error()};
+            }
+
+            auto result = FloydSteinbergDither(image.value(), c.n_levels);
+
+            if (!result) {
+                return std::unexpected{result.error()};
+            }
+
+            auto save = SaveImage(c.output_filename, result.value());
+            if (!save) {
+                return std::unexpected{save.error()};
+            }
+
+            fmt::print("Saved scatter image: {}, with n_levels: {}\n",
+                       (std::filesystem::current_path() / c.output_filename).string(),
+                       c.n_levels);
+
+            return {};
         }
     };
 

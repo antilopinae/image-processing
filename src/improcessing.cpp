@@ -182,4 +182,65 @@ namespace improcessing {
 
         return out;
     }
+
+    auto FloydSteinbergDither(const Image &src, uint8_t n_levels)
+        -> std::expected<Image, boost::system::error_code> {
+        if (n_levels < 2) {
+            return std::unexpected{
+                boost::system::errc::make_error_code(boost::system::errc::invalid_argument)
+            };
+        }
+
+        std::vector<float> buf(src.height * src.width);
+        for (size_t i = 0; i < buf.size(); ++i) {
+            buf[i] = static_cast<float>(src.data[i]);
+        }
+
+        Image out(src.width, src.height);
+
+        const auto levels_minus1 = static_cast<float>(n_levels - 1);
+        const auto scale_to_level = levels_minus1 / 255.0f;
+        const auto scale_from_level = 255.0f / levels_minus1;
+
+        for (size_t y = 0; y < src.height; ++y) {
+            for (size_t x = 0; x < src.width; ++x) {
+                const size_t idx = y * src.width + x;
+                auto oldv = buf[idx];
+
+                auto level_f = std::round(oldv * scale_to_level);
+
+                if (level_f < 0.0f) level_f = 0.0f;
+                if (level_f > levels_minus1) level_f = levels_minus1;
+
+                auto newv = level_f * scale_from_level;
+                auto err = oldv - newv;
+
+                uint64_t newbyte = std::lround(newv);
+
+                if (newbyte > 255u) {
+                    newbyte = 255u;
+                }
+
+                out.data[idx] = static_cast<uint8_t>(newbyte);
+
+                if (x + 1 < src.width) {
+                    buf[idx + 1] += err * (7.0f / 16.0f);
+                }
+                // bottom-left: (x-1, y+1) -> 3/16
+                if (x > 0 && (y + 1) < src.height) {
+                    buf[idx + src.width - 1] += err * (3.0f / 16.0f);
+                }
+                // bottom: (x, y+1) -> 5/16
+                if ((y + 1) < src.height) {
+                    buf[idx + src.width] += err * (5.0f / 16.0f);
+                }
+                // bottom-right: (x+1, y+1) -> 1/16
+                if ((x + 1) < src.width && (src.height + 1) < src.height) {
+                    buf[idx + src.width + 1] += err * (1.0f / 16.0f);
+                }
+            }
+        }
+
+        return out;
+    }
 }

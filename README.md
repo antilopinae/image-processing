@@ -92,11 +92,17 @@ Performs byte-by-byte mixing of two 8 bpp PNG images, using the third image as t
 
 ### Lab 2 — `lab2`
 
-(unimplemented)
+Converting an 8 bpp image to n bpp (n < 8) using the Floyd-Stenberg error scattering algorithm
 
 ```bash
-./image-processing lab2 --input <input.png> -o <output.png>
+./image-processing lab2 --input <input.png> -o <output.png> -n <number_of_levels>
 ```
+
+**Arguments:**
+
+* `--input` — path to input PNG-image for scattering
+* `-n`, `--n-levels` — amount of bpp to convert
+* `-o`, `--output` — output filepath to PNG-file
 
 ---
 
@@ -120,6 +126,8 @@ Print lab1 blend:
 ./image-processing lab1 blend --help
 ```
 
+---
+
 # Results
 
 ### Laboratory 1: Print gray circle
@@ -130,18 +138,28 @@ Print lab1 blend:
 
 #### First image
 
-![example_lab1_circle](./assets/ex-blend-image1.png)
+![example_lab1_blend_image1](./assets/ex-blend-image1.png)
 
 #### Second image
 
-![example_lab1_circle](./assets/ex-blend-image2.png)
+![example_lab1_blend_image2](./assets/ex-blend-image2.png)
 
 #### Alpha channel
 
-![example_lab1_circle](./assets/ex-blend-alpha.png)
+![example_lab1_blend_alpha](./assets/ex-blend-alpha.png)
 
 #### Result
 
-![example_lab1_circle](./assets/ex-blend-result.png)
+![example_lab1_blend_result](./assets/ex-blend-result.png)
 
-### Laboratory 2: Unimplemented
+---
+
+### Laboratory 2
+
+#### Input image
+
+![example_lab2_floyd](./assets/ex-floyd.png)
+
+#### Output with 17 bpp
+
+![example_lab2_floyd_result](./assets/ex-floyd-result.png)

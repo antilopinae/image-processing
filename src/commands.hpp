@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <variant>
 
@@ -25,6 +26,9 @@ struct Laboratory1Blend {
 };
 
 struct Laboratory2 {
+    const std::string &input_filename;
+    const std::string &output_filename;
+    const uint8_t n_levels;
 };
 
 using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2>;
