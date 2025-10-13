@@ -5,7 +5,6 @@
 
 ## Requirements
 
-* **OS:** Linux
 * **Build Tools:**
     * A C++23 compliant compiler (GCC 13+ or Clang 16+)
     * `CMake` (version 3.23+)
@@ -76,17 +75,17 @@ Performs byte-by-byte mixing of two 8 bpp PNG images, using the third image as t
 
 ```bash
 ./image-processing lab1 blend \
-  --input-first <A.png> \
-  --input-second <B.png> \
-  --input-alpha <alpha.png> \
+  --image-first <A.png> \
+  --image-second <B.png> \
+  --image-alpha <alpha.png> \
   -o <output.png>
 ```
 
 **Arguments:**
 
-* `--input-first` — first input PNG-image
-* `--input-second` — second input PNG-image
-* `--input-alpha` — input image with alpha (PNG, 8 bpp)
+* `--image-first` — first input PNG-image
+* `--image-second` — second input PNG-image
+* `--image-alpha` — input image with alpha (PNG, 8 bpp)
 * `-o`, `--output` — output filepath to PNG-file
 
 ---
@@ -121,4 +120,28 @@ Print lab1 blend:
 ./image-processing lab1 blend --help
 ```
 
-And others...
+# Results
+
+### Laboratory 1: Print gray circle
+
+![example_lab1_circle](./assets/ex-circle.png)
+
+### Laboratory 1: Blending two images
+
+#### First image
+
+![example_lab1_circle](./assets/ex-blend-image1.png)
+
+#### Second image
+
+![example_lab1_circle](./assets/ex-blend-image2.png)
+
+#### Alpha channel
+
+![example_lab1_circle](./assets/ex-blend-alpha.png)
+
+#### Result
+
+![example_lab1_circle](./assets/ex-blend-result.png)
+
+### Laboratory 2: Unimplemented

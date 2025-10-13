@@ -39,8 +39,7 @@ find_package(PNG REQUIRED)
 # main executable
 add_executable(${PROJECT_NAME}
         src/main.cpp
-        src/lab1.cpp
-        src/lab2.cpp
+        src/improcessing.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
