@@ -4,8 +4,7 @@
 #include <expected>
 #include <string>
 
-namespace improcessing
-{
+namespace improcessing {
     class Image;
 
     /*!
@@ -13,14 +12,14 @@ namespace improcessing
      * @param filename Name of file
      * @return Image at success
      */
-    auto ReadImage(const std::string& filename) -> std::expected<Image, boost::system::error_code>;
+    auto ReadImage(const std::string &filename) -> std::expected<Image, boost::system::error_code>;
 
     /*!
      * @brief Save Image to file
      * @param filename Name of file
      * @return nothing or error code in failure
      */
-    auto SaveImage(const std::string& filename, const Image& image) -> std::expected<void, boost::system::error_code>;
+    auto SaveImage(const std::string &filename, const Image &image) -> std::expected<void, boost::system::error_code>;
 
     /*!
      * @brief Prints circular grayscale at the Image
@@ -28,7 +27,8 @@ namespace improcessing
      * @param radius_fraction
      * @return nothing or error code in failure
      */
-    auto MakeCircularGrayscale(Image& image, double radius_fraction = 0.45) -> std::expected<void, boost::system::error_code>;
+    auto MakeCircularGrayscale(Image &image,
+                               double radius_fraction = 0.45) -> std::expected<void, boost::system::error_code>;
 
     /*!
      * @brief Blending two images, uses third as alpha channel
@@ -37,7 +37,7 @@ namespace improcessing
      * @param Alpha Image which will be used as alpha channel
      * @return new Image or error code in failure
      */
-    auto Blend(const Image& A, const Image& B, const Image& Alpha) -> std::expected<Image, boost::system::error_code>;
+    auto Blend(const Image &A, const Image &B, const Image &Alpha) -> std::expected<Image, boost::system::error_code>;
 
     /*!
      * @brief The Floyd-Stenberg error scattering algorithm
@@ -45,5 +45,5 @@ namespace improcessing
      * @param n_levels amount of bpp to convert
      * @return new scatter Image or error code in failure
      */
-    auto FloydSteinbergDither(const Image& src, uint8_t n_levels) -> std::expected<Image, boost::system::error_code>;
+    auto FloydSteinbergDither(const Image &src, uint8_t n_levels) -> std::expected<Image, boost::system::error_code>;
 } // namespace improcessing
