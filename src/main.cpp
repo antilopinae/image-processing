@@ -1,30 +1,26 @@
-#include <expected>
 #include <commands.hpp>
-#include <improcessing.hpp>
-#include <image.hpp>
-#include <iostream>
+#include <expected>
 #include <filesystem>
+#include <image.hpp>
+#include <improcessing.hpp>
+#include <iostream>
 
+#include <argparse/argparse.hpp>
 #include <boost/system/error_code.hpp>
 #include <fmt/core.h>
-#include <argparse/argparse.hpp>
 
-auto AddInputArgument(argparse::ArgumentParser &parser, std::string &input,
-                      const std::string &name = "--input") -> void {
-    parser.add_argument(name)
-            .required()
-            .store_into(input)
-            .help("specify the input file");
+auto AddInputArgument(argparse::ArgumentParser& parser, std::string& input, const std::string& name = "--input") -> void
+{
+    parser.add_argument(name).required().store_into(input).help("specify the input file");
 }
 
-auto AddOutputArgument(argparse::ArgumentParser &parser, std::string &output) -> void {
-    parser.add_argument("-o", "--output")
-            .required()
-            .store_into(output)
-            .help("specify the output file");
+auto AddOutputArgument(argparse::ArgumentParser& parser, std::string& output) -> void
+{
+    parser.add_argument("-o", "--output").required().store_into(output).help("specify the output file");
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
     std::string input_first{};
     std::string input_second{};
     std::string input_third{};
@@ -61,37 +57,34 @@ int main(int argc, char *argv[]) {
 
     parser.add_subparser(command_lab2);
 
-    try {
+    try
+    {
         parser.parse_args(argc, argv);
-    } catch (const std::exception &err) {
+    } catch (const std::exception& err)
+    {
         std::cerr << err.what() << std::endl;
         std::cerr << parser;
         return 1;
     }
 
-    auto initialize_cmd = [&] -> std::optional<Command> {
-        if (parser.is_subcommand_used(command_lab1)) {
-            if (command_lab1.is_subcommand_used(command_lab1_circle_gray)) {
-                return Laboratory1GrayCircle{
-                    .width = 512,
-                    .height = 512,
-                    .radius_fraction = 0.45,
-                    .output_filename = output
-                };
-            } else if (command_lab1.is_subcommand_used(command_lab1_blending)) {
+    auto initialize_cmd = [&] -> std::optional<Command>
+    {
+        if (parser.is_subcommand_used(command_lab1))
+        {
+            if (command_lab1.is_subcommand_used(command_lab1_circle_gray))
+            {
+                return Laboratory1GrayCircle{ .width = 512, .height = 512, .radius_fraction = 0.45, .output_filename = output };
+            }
+            else if (command_lab1.is_subcommand_used(command_lab1_blending))
+            {
                 return Laboratory1Blend{
-                    .first_filename = input_first,
-                    .second_filename = input_second,
-                    .alpha_filename = input_third,
-                    .output_filename = output
+                    .first_filename = input_first, .second_filename = input_second, .alpha_filename = input_third, .output_filename = output
                 };
             }
-        } else if (parser.is_subcommand_used(command_lab2)) {
-            return Laboratory2{
-                .input_filename = input_first,
-                .output_filename = output,
-                .n_levels = n_levels
-            };
+        }
+        else if (parser.is_subcommand_used(command_lab2))
+        {
+            return Laboratory2{ .input_filename = input_first, .output_filename = output, .n_levels = n_levels };
         }
 
         return std::nullopt;
@@ -102,94 +95,114 @@ int main(int argc, char *argv[]) {
     using namespace improcessing;
 
     const auto v = overloaded{
-        [](const Laboratory1GrayCircle &c) -> std::expected<void, boost::system::error_code> {
-            auto image = Image{c.width, c.height};
+        [](const Laboratory1GrayCircle& c) -> std::expected<void, boost::system::error_code>
+        {
+            auto image = Image{ c.width, c.height };
 
             auto grayscale = MakeCircularGrayscale(image, c.radius_fraction);
-            if (!grayscale) {
-                return std::unexpected{grayscale.error()};
+            if (!grayscale)
+            {
+                return std::unexpected{ grayscale.error() };
             }
 
             auto save = SaveImage(c.output_filename, image);
-            if (!save) {
-                return std::unexpected{save.error()};
+            if (!save)
+            {
+                return std::unexpected{ save.error() };
             }
 
-            fmt::print("Saved grayscale png image: {}, with width {} and height {}, with radius fraction: {}\n",
-                       (std::filesystem::current_path() / c.output_filename).string(),
-                       c.width, c.height, c.radius_fraction);
+            fmt::print(
+                "Saved grayscale png image: {}, with width {} and height {}, with radius fraction: {}\n",
+                (std::filesystem::current_path() / c.output_filename).string(),
+                c.width,
+                c.height,
+                c.radius_fraction);
 
             return {};
         },
-        [](const Laboratory1Blend &c) -> std::expected<void, boost::system::error_code> {
+        [](const Laboratory1Blend& c) -> std::expected<void, boost::system::error_code>
+        {
             auto A = ReadImage(c.first_filename);
-            if (!A) {
-                return std::unexpected{A.error()};
+            if (!A)
+            {
+                return std::unexpected{ A.error() };
             }
 
             auto B = ReadImage(c.second_filename);
-            if (!B) {
-                return std::unexpected{B.error()};
+            if (!B)
+            {
+                return std::unexpected{ B.error() };
             }
 
             auto Alpha = ReadImage(c.alpha_filename);
-            if (!Alpha) {
-                return std::unexpected{Alpha.error()};
+            if (!Alpha)
+            {
+                return std::unexpected{ Alpha.error() };
             }
 
             auto blended = Blend(A.value(), B.value(), Alpha.value());
-            if (!blended) {
-                return std::unexpected{blended.error()};
+            if (!blended)
+            {
+                return std::unexpected{ blended.error() };
             }
 
             auto result = SaveImage(c.output_filename, blended.value());
-            if (!result) {
-                return std::unexpected{result.error()};
+            if (!result)
+            {
+                return std::unexpected{ result.error() };
             }
 
-            fmt::print("Saved blended png image: {}\n",
-                       (std::filesystem::current_path() / c.output_filename).string());
+            fmt::print("Saved blended png image: {}\n", (std::filesystem::current_path() / c.output_filename).string());
 
             return {};
         },
-        [](const Laboratory2 &c) -> std::expected<void, boost::system::error_code> {
+        [](const Laboratory2& c) -> std::expected<void, boost::system::error_code>
+        {
             auto image = ReadImage(c.input_filename);
 
-            if (!image) {
-                return std::unexpected{image.error()};
+            if (!image)
+            {
+                return std::unexpected{ image.error() };
             }
 
             auto result = FloydSteinbergDither(image.value(), c.n_levels);
 
-            if (!result) {
-                return std::unexpected{result.error()};
+            if (!result)
+            {
+                return std::unexpected{ result.error() };
             }
 
             auto save = SaveImage(c.output_filename, result.value());
-            if (!save) {
-                return std::unexpected{save.error()};
+            if (!save)
+            {
+                return std::unexpected{ save.error() };
             }
 
-            fmt::print("Saved scatter image: {}, with n_levels: {}\n",
-                       (std::filesystem::current_path() / c.output_filename).string(),
-                       c.n_levels);
+            fmt::print(
+                "Saved scatter image: {}, with n_levels: {}\n", (std::filesystem::current_path() / c.output_filename).string(), c.n_levels);
 
             return {};
         }
     };
 
-    try {
-        if (cmd.has_value()) {
+    try
+    {
+        if (cmd.has_value())
+        {
             auto result = std::visit(v, cmd.value());
 
-            if (!result) {
+            if (!result)
+            {
                 fmt::print("Failed with error: {}\n", result.error().message());
                 return 1;
             }
-        } else {
+        }
+        else
+        {
             std::cout << parser << std::endl;
         }
-    } catch (const std::exception &ex) {
+    } catch (const std::exception& ex)
+    {
         std::cerr << "Fatal: " << ex.what() << "\n";
         return 1;
     }

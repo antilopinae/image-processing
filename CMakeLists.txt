@@ -15,6 +15,12 @@ if (USE_VCPKG_TOOLCHAIN)
     endif ()
 endif ()
 
+if (WIN32 AND MINGW)
+    set(VCPKG_TARGET_TRIPLET "x64-mingw-static" CACHE STRING "vcpkg triplet" FORCE)
+elseif (WIN32 AND MSVC)
+    set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "vcpkg triplet" FORCE)
+endif()
+
 # project setup
 project(image-processing VERSION 1.0.0 LANGUAGES CXX C)
 
@@ -23,9 +29,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build only static libraries" FORCE)
 
 # dependencies
 # find_package(PkgConfig REQUIRED)
@@ -46,11 +49,15 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         ${CMAKE_SOURCE_DIR}/src
 )
 
-target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ -static)
+if(UNIX)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build only static libraries" FORCE)
+    target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ -static)
+endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Boost::system
-        fmt::fmt
+        fmt::fmt-header-only
         argparse::argparse
         PNG::PNG
 )
