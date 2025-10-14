@@ -44,7 +44,8 @@ namespace improcessing {
         png_read_update_info(png.png_ptr, png.info_ptr);
 
         std::vector<uint8_t> data(width * height);
-        std::vector<png_bytep> row_ptrs(height);
+        std::vector<uint8_t *> row_ptrs(height);
+
         for (size_t y = 0; y < height; ++y) {
             row_ptrs[y] = data.data() + y * width;
         }
@@ -56,7 +57,7 @@ namespace improcessing {
     }
 
     auto SaveImage(const std::string &filename, const Image &image) -> std::expected<void, boost::system::error_code> {
-        if (image.data.size() != image.width * image.height) {
+        if (image.size() != image.width() * image.height()) {
             return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::invalid_argument)};
         }
 
@@ -73,8 +74,8 @@ namespace improcessing {
         png_set_IHDR(
             png.png_ptr,
             png.info_ptr,
-            image.width,
-            image.height,
+            image.width(),
+            image.height(),
             8,
             PNG_COLOR_TYPE_GRAY,
             PNG_INTERLACE_NONE,
@@ -83,10 +84,10 @@ namespace improcessing {
 
         png_write_info(png.png_ptr, png.info_ptr);
 
-        std::vector<png_bytep> row_ptrs(image.height);
+        std::vector<uint8_t *> row_ptrs(image.height());
 
-        for (size_t y = 0; y < image.height; ++y) {
-            row_ptrs[y] = const_cast<png_bytep>(image.data.data() + y * image.width);
+        for (size_t y = 0; y < image.height(); ++y) {
+            row_ptrs[y] = const_cast<uint8_t *>(image.data() + y * image.width());
         }
 
         png_write_image(png.png_ptr, row_ptrs.data());
@@ -96,13 +97,13 @@ namespace improcessing {
     }
 
     auto MakeCircularGrayscale(Image &image, double radius_fraction) -> std::expected<void, boost::system::error_code> {
-        const auto cx = (image.width - 1) / 2.0;
-        const auto cy = (image.height - 1) / 2.0;
-        const auto r = std::min(image.width, image.height) * radius_fraction;
+        const auto cx = (image.width() - 1) / 2.0;
+        const auto cy = (image.height() - 1) / 2.0;
+        const auto r = std::min(image.width(), image.height()) * radius_fraction;
         const auto edge_width = std::max(1.0, r * 0.02);
 
-        for (int y = 0; y < image.height; ++y) {
-            for (int x = 0; x < image.width; ++x) {
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
                 const auto dx = x - cx;
                 const auto dy = y - cy;
                 const auto d = std::sqrt(dx * dx + dy * dy);
@@ -123,7 +124,7 @@ namespace improcessing {
                     value = static_cast<uint8_t>(std::round(v));
                 }
 
-                image.data[y * image.width + x] = value;
+                image.data()[y * image.width() + x] = value;
             }
         }
 
@@ -131,49 +132,49 @@ namespace improcessing {
     }
 
     auto Blend(const Image &A, const Image &B, const Image &Alpha) -> std::expected<Image, boost::system::error_code> {
-        if (A.width > B.width || A.height > B.height || A.width > Alpha.width || A.height > Alpha.height) {
+        if (A.width() > B.width() || A.height() > B.height() || A.width() > Alpha.width() || A.height() > Alpha.
+            height()) {
             return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::invalid_argument)};
         }
 
-        const auto totalPixels = static_cast<size_t>(A.width) * static_cast<size_t>(A.height);
+        const auto totalPixels = A.width() * A.height();
 
         Image out;
-        out.width = A.width;
-        out.height = A.height;
-        out.data.resize(totalPixels);
+        out.resize(A.width(), A.height());
 
         for (size_t i = 0; i < totalPixels; ++i) {
-            const auto a = A.data[i];
-            const auto b = B.data[i];
-            const auto alpha = Alpha.data[i];
+            const auto a = A.data()[i];
+            const auto b = B.data()[i];
+            const auto alpha = Alpha.data()[i];
 
             const auto blended = static_cast<uint64_t>(alpha) * b + static_cast<uint64_t>(255 - alpha) * a;
 
-            out.data[i] = static_cast<uint8_t>(blended / 255);
+            out.data()[i] = static_cast<uint8_t>(blended / 255);
         }
 
         return out;
     }
 
-    auto FloydSteinbergDither(const Image &src, uint8_t n_levels) -> std::expected<Image, boost::system::error_code> {
+    auto FloydSteinbergDither(const Image &input_image,
+                              uint8_t n_levels) -> std::expected<Image, boost::system::error_code> {
         if (n_levels < 2) {
             return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::invalid_argument)};
         }
 
-        std::vector<float> buf(src.height * src.width);
+        std::vector<float> buf(input_image.height() * input_image.width());
         for (size_t i = 0; i < buf.size(); ++i) {
-            buf[i] = static_cast<float>(src.data[i]);
+            buf[i] = static_cast<float>(input_image.data()[i]);
         }
 
-        Image out(src.width, src.height);
+        Image out(input_image.width(), input_image.height());
 
         const auto levels_minus1 = static_cast<float>(n_levels - 1);
         const auto scale_to_level = levels_minus1 / 255.0f;
         const auto scale_from_level = 255.0f / levels_minus1;
 
-        for (size_t y = 0; y < src.height; ++y) {
-            for (size_t x = 0; x < src.width; ++x) {
-                const size_t idx = y * src.width + x;
+        for (size_t y = 0; y < input_image.height(); ++y) {
+            for (size_t x = 0; x < input_image.width(); ++x) {
+                const size_t idx = y * input_image.width() + x;
                 auto oldv = buf[idx];
 
                 auto level_f = std::round(oldv * scale_to_level);
@@ -192,22 +193,22 @@ namespace improcessing {
                     newbyte = 255u;
                 }
 
-                out.data[idx] = static_cast<uint8_t>(newbyte);
+                out.data()[idx] = static_cast<uint8_t>(newbyte);
 
-                if (x + 1 < src.width) {
+                if (x + 1 < input_image.width()) {
                     buf[idx + 1] += err * (7.0f / 16.0f);
                 }
                 // bottom-left: (x-1, y+1) -> 3/16
-                if (x > 0 && (y + 1) < src.height) {
-                    buf[idx + src.width - 1] += err * (3.0f / 16.0f);
+                if (x > 0 && (y + 1) < input_image.height()) {
+                    buf[idx + input_image.width() - 1] += err * (3.0f / 16.0f);
                 }
                 // bottom: (x, y+1) -> 5/16
-                if ((y + 1) < src.height) {
-                    buf[idx + src.width] += err * (5.0f / 16.0f);
+                if ((y + 1) < input_image.height()) {
+                    buf[idx + input_image.width()] += err * (5.0f / 16.0f);
                 }
                 // bottom-right: (x+1, y+1) -> 1/16
-                if ((x + 1) < src.width && (src.height + 1) < src.height) {
-                    buf[idx + src.width + 1] += err * (1.0f / 16.0f);
+                if ((x + 1) < input_image.width() && (input_image.height() + 1) < input_image.height()) {
+                    buf[idx + input_image.width() + 1] += err * (1.0f / 16.0f);
                 }
             }
         }
