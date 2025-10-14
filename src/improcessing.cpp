@@ -10,7 +10,6 @@
 namespace improcessing {
     auto ReadImage(const std::string &filename) -> std::expected<Image, boost::system::error_code> {
         std::unique_ptr<FILE, details::FileCloser> file(std::fopen(filename.c_str(), "rb"));
-
         if (!file) {
             return std::unexpected{
                 boost::system::errc::make_error_code(boost::system::errc::no_such_file_or_directory)
@@ -55,7 +54,6 @@ namespace improcessing {
 
     auto SaveImage(const std::string &filename, const Image &image) -> std::expected<void, boost::system::error_code> {
         std::unique_ptr<FILE, details::FileCloser> file(std::fopen(filename.c_str(), "wb"));
-
         if (!file) {
             return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::io_error)};
         }
@@ -126,12 +124,12 @@ namespace improcessing {
             return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::invalid_argument)};
         }
 
-        const auto totalPixels = A.width() * A.height();
-
         Image out;
         out.resize(A.width(), A.height());
 
-        for (size_t i = 0; i < totalPixels; ++i) {
+        const auto total = A.width() * A.height();
+
+        for (size_t i = 0; i < total; ++i) {
             const auto a = A.data()[i];
             const auto b = B.data()[i];
             const auto alpha = Alpha.data()[i];
