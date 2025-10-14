@@ -8,4 +8,8 @@ add_executable(${PROJECT_NAME}-tests
         #        image_tests.cpp # redundant
 )
 
+target_include_directories(${PROJECT_NAME}-tests PUBLIC
+        ${CMAKE_SOURCE_DIR}/src/tests
+)
+
 target_link_libraries(${PROJECT_NAME}-tests PRIVATE GTest::gtest GTest::gtest_main)
