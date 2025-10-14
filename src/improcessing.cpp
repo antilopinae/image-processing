@@ -152,7 +152,7 @@ namespace improcessing {
             out.data()[i] = static_cast<uint8_t>(blended / 255);
         }
 
-        return out;
+        return std::move(out);
     }
 
     auto FloydSteinbergDither(const Image &input_image,
@@ -213,6 +213,6 @@ namespace improcessing {
             }
         }
 
-        return out;
+        return std::move(out);
     }
 } // namespace improcessing

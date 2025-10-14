@@ -16,7 +16,7 @@ namespace improcessing {
         explicit Image(size_type width = 0, size_type height = 0)
             : width_(width)
               , height_(height)
-              , data_(width * height, static_cast<uint8_t>(0)) {
+              , data_(width * height, 0) {
         }
 
         Image(size_type width, size_type height, std::vector<uint8_t> &&data)

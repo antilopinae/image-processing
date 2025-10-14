@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     std::string input_third{};
     std::string output{};
 
-    argparse::ArgumentParser parser("image-processing", "0.1.0", argparse::default_arguments::none);
+    argparse::ArgumentParser parser("image-processing", "0.1.0", argparse::default_arguments::help);
     parser.add_description("Image processing program");
 
     argparse::ArgumentParser command_lab1("lab1");
@@ -46,12 +46,11 @@ int main(int argc, char *argv[]) {
     parser.add_subparser(command_lab1);
 
     uint8_t n_levels;
-
     argparse::ArgumentParser command_lab2("lab2");
     command_lab2.add_description("starts Floyd-Stenberg algorithm");
+    command_lab2.add_argument("-n", "--n-levels").required().store_into(n_levels).help("set level for scattering");
     AddInputArgument(command_lab2, input_first);
     AddOutputArgument(command_lab2, output);
-    command_lab2.add_argument("-n", "--n-levels").required().store_into(n_levels).help("set level for scattering");
 
     parser.add_subparser(command_lab2);
 
