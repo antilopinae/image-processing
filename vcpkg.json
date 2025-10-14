@@ -5,7 +5,8 @@
     "boost-system",
     "fmt",
     "argparse",
-    "libpng"
+    "libpng",
+    "gtest"
   ],
   "vcpkg-configuration": {
     "overlay-ports": [

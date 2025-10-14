@@ -140,13 +140,11 @@ int main(int argc, char *argv[]) {
         },
         [](const Laboratory2 &c) -> std::expected<void, boost::system::error_code> {
             auto image = ReadImage(c.input_filename);
-
             if (!image) {
                 return std::unexpected{image.error()};
             }
 
             auto result = FloydSteinbergDither(image.value(), c.n_levels);
-
             if (!result) {
                 return std::unexpected{result.error()};
             }

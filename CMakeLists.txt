@@ -62,3 +62,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         PNG::PNG
 )
 
+# tests
+add_subdirectory(src/tests)
+
