@@ -37,6 +37,16 @@ namespace improcessing {
             data_.resize(new_width * new_height, 0);
         }
 
+        [[nodiscard]] auto get_ptrs() const -> std::vector<uint8_t *> {
+            std::vector<uint8_t *> row_ptrs(height_);
+
+            for (size_type y = 0; y < height_; ++y) {
+                row_ptrs[y] = const_cast<uint8_t *>(data_.data()) + y * width_;
+            }
+
+            return std::move(row_ptrs);
+        }
+
         iterator begin() noexcept { return data_.begin(); }
         iterator end() noexcept { return data_.end(); }
         const_iterator begin() const noexcept { return data_.begin(); }
@@ -44,14 +54,14 @@ namespace improcessing {
         const_iterator cbegin() const noexcept { return data_.cbegin(); }
         const_iterator cend() const noexcept { return data_.cend(); }
 
-        size_type size() const noexcept { return data_.size(); }
-        bool empty() const noexcept { return data_.empty(); }
+        [[nodiscard]] size_type size() const noexcept { return data_.size(); }
+        [[nodiscard]] bool empty() const noexcept { return data_.empty(); }
 
         uint8_t *data() noexcept { return data_.data(); }
         const uint8_t *data() const noexcept { return data_.data(); }
 
-        std::uint64_t width() const noexcept { return width_; }
-        std::uint64_t height() const noexcept { return height_; }
+        [[nodiscard]] size_type width() const noexcept { return width_; }
+        [[nodiscard]] size_type height() const noexcept { return height_; }
 
     private:
         size_type width_;

@@ -43,24 +43,17 @@ namespace improcessing {
 
         png_read_update_info(png.png_ptr, png.info_ptr);
 
-        std::vector<uint8_t> data(width * height);
-        std::vector<uint8_t *> row_ptrs(height);
+        Image image(width, height);
 
-        for (size_t y = 0; y < height; ++y) {
-            row_ptrs[y] = data.data() + y * width;
-        }
+        auto row_ptrs = image.get_ptrs();
 
         png_read_image(png.png_ptr, row_ptrs.data());
         png_read_end(png.png_ptr, png.info_ptr);
 
-        return Image{width, height, std::move(data)};
+        return std::move(image);
     }
 
     auto SaveImage(const std::string &filename, const Image &image) -> std::expected<void, boost::system::error_code> {
-        if (image.size() != image.width() * image.height()) {
-            return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::invalid_argument)};
-        }
-
         std::unique_ptr<FILE, details::FileCloser> file(std::fopen(filename.c_str(), "wb"));
 
         if (!file) {
@@ -84,11 +77,7 @@ namespace improcessing {
 
         png_write_info(png.png_ptr, png.info_ptr);
 
-        std::vector<uint8_t *> row_ptrs(image.height());
-
-        for (size_t y = 0; y < image.height(); ++y) {
-            row_ptrs[y] = const_cast<uint8_t *>(image.data() + y * image.width());
-        }
+        auto row_ptrs = image.get_ptrs();
 
         png_write_image(png.png_ptr, row_ptrs.data());
         png_write_end(png.png_ptr, png.info_ptr);
