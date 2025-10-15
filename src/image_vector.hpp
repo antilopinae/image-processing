@@ -8,6 +8,28 @@
 #include <functional>
 
 namespace improcessing {
+    template<typename T>
+    struct Pixel {
+        union {
+            struct {
+                T r;
+                T g;
+                T b;
+            };
+
+            T data[3];
+        };
+
+        explicit Pixel() : r(0), g(0), b(0) {
+        }
+
+        Pixel(T r_, T g_, T b_) : r(r_), g(g_), b(b_) {
+        }
+    };
+
+    template<typename T>
+    class ImageRGB;
+
     template<bool IsConst, typename T>
     class GenericIterator {
     public:
@@ -27,63 +49,100 @@ namespace improcessing {
         }
 
         GenericIterator &operator++() {
-            ++ptr_;
+            for (int i = 0; i < step_; ++i) {
+                ++ptr_;
+            }
             return *this;
         }
 
         GenericIterator operator++(int) {
             GenericIterator temp = *this;
-            ++(*this);
+            for (int i = 0; i < step_; ++i) {
+                ++(*this);
+            }
             return temp;
         }
 
         GenericIterator &operator--() {
-            --ptr_;
+            for (int i = 0; i < step_; ++i) {
+                --ptr_;
+            }
             return *this;
         }
 
         GenericIterator operator--(int) {
             GenericIterator temp = *this;
-            --(*this);
+            for (int i = 0; i < step_; ++i) {
+                --(*this);
+            }
             return temp;
         }
 
         GenericIterator &operator+=(difference_type n) {
-            ptr_ += n;
+            ptr_ += n * step_;
             return *this;
         }
 
         GenericIterator operator+(difference_type n) const {
             GenericIterator temp = *this;
-            return temp += n;
+            return temp += n * step_;
         }
 
         GenericIterator &operator-=(difference_type n) {
-            ptr_ -= n;
+            ptr_ -= n * step_;
             return *this;
         }
 
         GenericIterator operator-(difference_type n) const {
             GenericIterator temp = *this;
-            return temp -= n;
+            return temp -= n * step_;
         }
 
-        difference_type operator-(const GenericIterator &other) const { return ptr_ - other.ptr_; }
+        difference_type operator-(const GenericIterator &other) const {
+            return (ptr_ - other.ptr_) / step_;
+        }
 
-        bool operator==(const GenericIterator &other) const { return ptr_ == other.ptr_; }
-        bool operator!=(const GenericIterator &other) const { return !(*this == other); }
-        bool operator<(const GenericIterator &other) const { return ptr_ < other.ptr_; }
-        bool operator>(const GenericIterator &other) const { return ptr_ > other.ptr_; }
-        bool operator<=(const GenericIterator &other) const { return ptr_ <= other.ptr_; }
-        bool operator>=(const GenericIterator &other) const { return ptr_ >= other.ptr_; }
+        bool operator==(const GenericIterator &other) const {
+            return ptr_ == other.ptr_;
+        }
 
-        template<typename G>
-        explicit operator G() const {
-            return reinterpret_cast<G *>(const_cast<G *>(ptr_));
+        bool operator!=(const GenericIterator &other) const {
+            return !(*this == other);
+        }
+
+        bool operator<(const GenericIterator &other) const {
+            return ptr_ < other.ptr_;
+        }
+
+        bool operator>(const GenericIterator &other) const {
+            return ptr_ > other.ptr_;
+        }
+
+        bool operator<=(const GenericIterator &other) const {
+            return ptr_ <= other.ptr_;
+        }
+
+        bool operator>=(const GenericIterator &other) const {
+            return ptr_ >= other.ptr_;
+        }
+
+        template<typename U>
+        explicit operator GenericIterator<IsConst, U>() const {
+            auto v = GenericIterator<IsConst, U>(reinterpret_cast<U *>(ptr_));
+            v.set_step(sizeof(U) / sizeof(T));
+            return v;
         }
 
     private:
+        template<bool B, typename U>
+        friend class GenericIterator;
+
+        void set_step(difference_type step) {
+            step_ = step;
+        }
+
         value_type *ptr_;
+        difference_type step_ = 1;
     };
 
     template<typename T>

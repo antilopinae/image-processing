@@ -120,3 +120,34 @@ TEST(ImageRGB, EmptyReturnsTrueWhenNoData_UnitTest) {
     Image img;
     EXPECT_TRUE(img.Empty());
 }
+
+TEST(ImageRGB, Iterators_UnitTest) {
+    Image img(3, 2, ImageRGB<uint8_t>::Type::kRGB);
+    img(0, 0) = 1;
+    img(1, 0) = 2;
+    img(2, 0) = 3;
+
+    img(0, 1) = 1;
+    img(1, 1) = 2;
+    img(2, 1) = 3;
+
+    int i = 0;
+    for (auto v: img) {
+        EXPECT_EQ(v.r, 1);
+        EXPECT_EQ(v.g, 2);
+        EXPECT_EQ(v.b, 3);
+        ++i;
+    }
+
+    EXPECT_EQ(i, 2);
+
+    i = 0;
+    for (const auto v: img) {
+        EXPECT_EQ(v.r, 1);
+        EXPECT_EQ(v.g, 2);
+        EXPECT_EQ(v.b, 3);
+        ++i;
+    }
+
+    EXPECT_EQ(i, 2);
+}

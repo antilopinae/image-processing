@@ -115,25 +115,6 @@ namespace improcessing {
         using ImageBase<T>::vector;
     };
 
-    template<typename T>
-    struct PixelRGB {
-        union {
-            struct {
-                T r;
-                T g;
-                T b;
-            };
-
-            T data[3];
-        };
-
-        explicit PixelRGB() : r(0), g(0), b(0) {
-        }
-
-        PixelRGB(T r_, T g_, T b_) : r(r_), g(g_), b(b_) {
-        }
-    };
-
     template<typename T = uint8_t>
     class ImageRGB {
     public:
@@ -149,7 +130,7 @@ namespace improcessing {
         using iterator_gray_type = ImageGray::iterator_type;
         using const_iterator_gray_type = ImageGray::const_iterator_type;
 
-        using rgb_type = PixelRGB<T>;
+        using rgb_type = Pixel<T>;
         using vector_rgb = ImageBase<rgb_type>;
         using iterator_rgb_type = GenericIterator<false, rgb_type>;
         using const_iterator_rgb_type = GenericIterator<true, rgb_type>;
@@ -191,27 +172,33 @@ namespace improcessing {
         }
 
         auto begin() noexcept -> iterator_rgb_type {
-            return static_cast<iterator_rgb_type>(image_.begin());
+            auto v = image_.begin();
+            return static_cast<iterator_rgb_type>(v);
         }
 
         auto end() noexcept -> iterator_rgb_type {
-            return static_cast<iterator_rgb_type>(image_.end());
+            auto v = image_.end();
+            return static_cast<iterator_rgb_type>(v);
         }
 
         auto begin() const noexcept -> const_iterator_rgb_type {
-            return static_cast<const_iterator_rgb_type>(image_.begin());
+            auto v = image_.begin();
+            return static_cast<const_iterator_rgb_type>(v);
         }
 
         auto end() const noexcept -> const_iterator_rgb_type {
-            return static_cast<const_iterator_rgb_type>(image_.end());
+            auto v = image_.end();
+            return static_cast<const_iterator_rgb_type>(v);
         }
 
         auto cbegin() const noexcept -> const_iterator_rgb_type {
-            return static_cast<const_iterator_rgb_type>(image_.cbegin());
+            auto v = image_.cbegin();
+            return static_cast<const_iterator_rgb_type>(v);
         }
 
         auto cend() const noexcept -> const_iterator_rgb_type {
-            return static_cast<const_iterator_rgb_type>(image_.cend());
+            auto v = image_.cend();
+            return static_cast<const_iterator_rgb_type>(v);
         }
 
         [[nodiscard]] size_t size() const noexcept {
