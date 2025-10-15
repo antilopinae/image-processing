@@ -22,8 +22,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/src
 )
 
-target_link_options(${PROJECT_NAME} PUBLIC -static)
 if(UNIX)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build only static libraries" FORCE)
+    target_link_options(${PROJECT_NAME} PUBLIC -static)
     target_link_options(${PROJECT_NAME} PUBLIC -static-libgcc -static-libstdc++)
 endif()
 

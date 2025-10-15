@@ -1,4 +1,4 @@
-find_package(GTest REQUIRED)
+find_package(GTest CONFIG REQUIRED)
 
 enable_testing()
 
@@ -17,3 +17,5 @@ target_link_libraries(${PROJECT_NAME}-tests PUBLIC
     GTest::gtest
     GTest::gtest_main
 )
+
+add_test(NAME RunAllTests COMMAND ${PROJECT_NAME}-tests)

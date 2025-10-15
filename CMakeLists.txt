@@ -39,8 +39,5 @@ find_package(PNG REQUIRED)
 
 # pkg_check_modules(LIBBPF REQUIRED IMPORTED_TARGET libbpf)
 
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build only static libraries" FORCE)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 add_subdirectory(src)
 add_subdirectory(src/tests)
