@@ -180,7 +180,7 @@ namespace improcessing {
 
         void resize(size_type new_width, size_type new_height, Type type = Type::kGray) {
             if (type == Type::kRGB) {
-                image_.rgb_.resize(new_width, new_height);
+                image_.gray_.resize(new_width * kAmountRgb, new_height * kAmountRgb);
             } else {
                 image_.gray_.resize(new_width, new_height);
             }
@@ -197,11 +197,7 @@ namespace improcessing {
 
         [[nodiscard]] size_type size() const noexcept { return image_.gray_.size(); }
 
-        [[nodiscard]] bool empty(Type type = Type::kGray) const noexcept {
-            if (type == Type::kRGB) {
-                return image_.rgb_.empty();
-            }
-
+        [[nodiscard]] bool empty() const noexcept {
             return image_.gray_.empty();
         }
 
@@ -210,7 +206,7 @@ namespace improcessing {
 
         [[nodiscard]] size_type width(Type type = Type::kGray) const noexcept {
             if (type == Type::kRGB) {
-                return image_.rgb_.width_;
+                return image_.gray_.width_ / kAmountRgb;
             }
 
             return image_.gray_.width_;
@@ -218,7 +214,7 @@ namespace improcessing {
 
         [[nodiscard]] size_type height(Type type = Type::kGray) const noexcept {
             if (type == Type::kRGB) {
-                return image_.rgb_.height_;
+                return image_.gray_.height_ / kAmountRgb;
             }
 
             return image_.gray_.height_;
