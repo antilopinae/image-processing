@@ -12,7 +12,7 @@ target_include_directories(${PROJECT_NAME}-tests PUBLIC
     ${CMAKE_SOURCE_DIR}/src/tests
 )
 
-target_link_libraries(${PROJECT_NAME}-tests PRIVATE
+target_link_libraries(${PROJECT_NAME}-tests PUBLIC
     ${PROJECT_NAME}-core
     GTest::gtest
     GTest::gtest_main

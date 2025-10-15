@@ -160,6 +160,18 @@ Print lab1 blend:
 
 ![example_lab2_floyd](./assets/ex-floyd.png)
 
-#### Output with 17 bpp
+#### Output with 2 bpp
 
-![example_lab2_floyd_result](./assets/ex-floyd-result.png)
+![example_lab2_floyd_result](./assets/ex-floyd2.png)
+
+#### Output with 3 bpp
+
+![example_lab2_floyd_result](./assets/ex-floyd3.png)
+
+#### Output with 4 bpp
+
+![example_lab2_floyd_result](./assets/ex-floyd4.png)
+
+#### Output with 8 bpp
+
+![example_lab2_floyd_result](./assets/ex-floyd8.png)

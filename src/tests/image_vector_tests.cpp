@@ -30,6 +30,7 @@ TEST(ImVector, InitializerListConstructor_UnitTest) {
     EXPECT_EQ(v[0], 1);
     EXPECT_EQ(v[1], 2);
     EXPECT_EQ(v[2], 3);
+    std::cout << v << std::endl;
 }
 
 TEST(ImVector, PushBackIncreasesSize_UnitTest) {

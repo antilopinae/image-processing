@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{result.error()};
             }
 
-            auto save = SaveImage(c.output_filename, result.value());
+            auto save = SaveImage(c.output_filename, image.value());
             if (!save) {
                 return std::unexpected{save.error()};
             }

@@ -40,9 +40,9 @@ namespace improcessing {
 
     /*!
      * @brief The Floyd-Stenberg error scattering algorithm
-     * @param src Image for blending
+     * @param src Image for dithering
      * @param n_levels amount of bpp to convert
-     * @return new scatter Image or error code in failure
+     * @return nothing or error code in failure
      */
-    auto FloydSteinbergDither(const Image &src, uint8_t n_levels) -> std::expected<Image, boost::system::error_code>;
+    auto FloydSteinbergDither(Image &src, uint8_t n_levels) -> std::expected<void, boost::system::error_code>;
 } // namespace improcessing

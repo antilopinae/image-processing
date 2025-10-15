@@ -143,64 +143,50 @@ namespace improcessing {
         return std::move(out);
     }
 
-    auto FloydSteinbergDither(const Image &input_image,
-                              uint8_t n_levels) -> std::expected<Image, boost::system::error_code> {
-        if (n_levels < 2) {
-            return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::invalid_argument)};
-        }
+    auto FloydSteinbergDither(Image &img, uint8_t n_levels) -> std::expected<void, boost::system::error_code> {
+        const int rows = img.HeightGray();
+        const int cols = img.WidthGray();
 
-        std::vector<float> buf(input_image.HeightGray() * input_image.WidthGray());
-        for (size_t i = 0; i < buf.size(); ++i) {
-            buf[i] = static_cast<float>(input_image.DataGray()[i]);
-        }
+        int err;
+        auto apply_error = [&](int x, int y, int num, int den) {
+            if (y >= 0 && y < rows && x >= 0 && x < cols) {
+                int val = img(x, y) + (err * num) / den;
+                img(x, y) = std::clamp(val, 0, 255);
+            }
+        };
 
-        Image out(input_image.WidthGray(), input_image.HeightGray());
+        int levels = 1 << n_levels;
 
-        const auto levels_minus1 = static_cast<float>(n_levels - 1);
-        const auto scale_to_level = levels_minus1 / 255.0f;
-        const auto scale_from_level = 255.0f / levels_minus1;
+        bool reverse = false;
+        int start, end, step, oldval, newval, nearest_level;
 
-        for (size_t y = 0; y < input_image.HeightGray(); ++y) {
-            for (size_t x = 0; x < input_image.WidthGray(); ++x) {
-                const size_t idx = y * input_image.WidthGray() + x;
-                auto oldv = buf[idx];
+        for (int y = 0; y < rows; ++y) {
+            reverse = (y % 2 != 0);
+            start = reverse ? cols - 1 : 0;
+            end = reverse ? -1 : cols;
+            step = reverse ? -1 : 1;
 
-                auto level_f = std::round(oldv * scale_to_level);
+            for (int x = start; x != end; x += step) {
+                oldval = img(x, y);
+                nearest_level = (oldval * (levels - 1) + 127) / 255;
+                newval = (nearest_level * 255 + (levels - 1) / 2) / (levels - 1);
+                img(x, y) = newval;
+                err = oldval - newval;
 
-                if (level_f < 0.0f)
-                    level_f = 0.0f;
-                if (level_f > levels_minus1)
-                    level_f = levels_minus1;
-
-                auto newv = level_f * scale_from_level;
-                auto err = oldv - newv;
-
-                uint64_t newbyte = std::lround(newv);
-
-                if (newbyte > 255u) {
-                    newbyte = 255u;
-                }
-
-                out.DataGray()[idx] = static_cast<uint8_t>(newbyte);
-
-                if (x + 1 < input_image.WidthGray()) {
-                    buf[idx + 1] += err * (7.0f / 16.0f);
-                }
-                // bottom-left: (x-1, y+1) -> 3/16
-                if (x > 0 && (y + 1) < input_image.HeightGray()) {
-                    buf[idx + input_image.WidthGray() - 1] += err * (3.0f / 16.0f);
-                }
-                // bottom: (x, y+1) -> 5/16
-                if ((y + 1) < input_image.HeightGray()) {
-                    buf[idx + input_image.WidthGray()] += err * (5.0f / 16.0f);
-                }
-                // bottom-right: (x+1, y+1) -> 1/16
-                if ((x + 1) < input_image.WidthGray() && (input_image.HeightGray() + 1) < input_image.HeightGray()) {
-                    buf[idx + input_image.WidthGray() + 1] += err * (1.0f / 16.0f);
+                if (!reverse) {
+                    apply_error(x + 1, y, 7, 16);
+                    apply_error(x - 1, y + 1, 3, 16);
+                    apply_error(x, y + 1, 5, 16);
+                    apply_error(x + 1, y + 1, 1, 16);
+                } else {
+                    apply_error(x - 1, y, 7, 16);
+                    apply_error(x + 1, y + 1, 3, 16);
+                    apply_error(x, y + 1, 5, 16);
+                    apply_error(x - 1, y + 1, 1, 16);
                 }
             }
         }
 
-        return std::move(out);
+        return {};
     }
 } // namespace improcessing

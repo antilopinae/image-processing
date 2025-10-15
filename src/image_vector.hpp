@@ -27,9 +27,6 @@ namespace improcessing {
         }
     };
 
-    template<typename T>
-    class ImageRGB;
-
     template<bool IsConst, typename T>
     class GenericIterator {
     public:
@@ -130,6 +127,7 @@ namespace improcessing {
         explicit operator GenericIterator<IsConst, U>() const {
             auto v = GenericIterator<IsConst, U>(reinterpret_cast<U *>(ptr_));
             v.set_step(sizeof(U) / sizeof(T));
+            static_assert(sizeof(U) > sizeof(T), "Cast Type U must be larger than T");
             return v;
         }
 
@@ -137,7 +135,7 @@ namespace improcessing {
         template<bool B, typename U>
         friend class GenericIterator;
 
-        void set_step(difference_type step) {
+        void set_step(difference_type step) noexcept {
             step_ = step;
         }
 

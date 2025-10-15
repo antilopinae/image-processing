@@ -22,11 +22,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/src
 )
 
-target_link_options(${PROJECT_NAME} PRIVATE -static)
+target_link_options(${PROJECT_NAME} PUBLIC -static)
 if(UNIX)
-    target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++)
+    target_link_options(${PROJECT_NAME} PUBLIC -static-libgcc -static-libstdc++)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME} PUBLIC
     ${PROJECT_NAME}-core
 )
