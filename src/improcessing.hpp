@@ -3,10 +3,9 @@
 #include <boost/system/errc.hpp>
 #include <expected>
 #include <string>
+#include <image.hpp>
 
 namespace improcessing {
-    class Image;
-
     /*!
      * @brief Reads Image from file
      * @param filename Name of file

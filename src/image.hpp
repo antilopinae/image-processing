@@ -3,96 +3,117 @@
 #include <cinttypes>
 #include <cstdint>
 #include <memory>
-#include <vector>
+#include <image_vector.hpp>
+#include <fmt/base.h>
 
 namespace improcessing {
-    template<typename T, typename S = std::vector<T>::size_type>
+    template<typename T>
     class ImageBase {
     public:
         using value_type = T;
-        using size_type = S;
-        using iterator_type = std::vector<value_type>::iterator;
-        using const_iterator_type = std::vector<value_type>::const_iterator;
+        using iterator_type = ImVector<value_type>::iterator;
+        using const_iterator_type = ImVector<value_type>::const_iterator;
+        using vector = ImVector<value_type>;
 
-        explicit ImageBase(size_type width = 0, size_type height = 0)
+        explicit ImageBase(size_t width = 0, size_t height = 0)
             : width_(width)
               , height_(height)
               , data_(width * height) {
         }
 
-
-        ImageBase(size_type width, size_type height, std::vector<value_type> &&data)
+        ImageBase(size_t width, size_t height, ImVector<value_type> &&data)
             : width_(width)
               , height_(height)
-              , data_(std::forward<std::vector<value_type> >(data)) {
+              , data_(std::forward<ImVector<value_type> >(data)) {
         }
 
-        [[nodiscard]] auto get_ptrs() const -> std::vector<value_type *> {
-            std::vector<value_type *> row_ptrs(height_);
+        [[nodiscard]] auto get_ptrs() const -> ImVector<value_type *> {
+            ImVector<value_type *> row_ptrs(height_);
 
-            for (size_type y = 0; y < height_; ++y) {
+            for (size_t y = 0; y < height_; ++y) {
                 row_ptrs[y] = const_cast<value_type *>(data()) + y * width_;
             }
 
             return std::move(row_ptrs);
         }
 
-        value_type &operator()(size_type x, size_type y) {
+        value_type &operator()(size_t x, size_t y) {
             return data_.at(y * width_ + x);
         }
 
-        const value_type &operator()(size_type x, size_type y) const {
+        const value_type &operator()(size_t x, size_t y) const {
             return data_.at(y * width_ + x);
         }
 
-        void resize(size_type new_width, size_type new_height) {
+        void resize(size_t new_width, size_t new_height) {
             data_.resize(new_width * new_height);
         }
 
-        iterator_type begin() noexcept { return data_.begin(); }
-        iterator_type end() noexcept { return data_.end(); }
-
-        const_iterator_type begin() const noexcept { return data_.begin(); }
-        const_iterator_type end() const noexcept { return data_.end(); }
-
-        const_iterator_type cbegin() const noexcept { return data_.cbegin(); }
-        const_iterator_type cend() const noexcept { return data_.cend(); }
-
-        [[nodiscard]] size_type size() const noexcept { return data_.size(); }
-        [[nodiscard]] bool empty() const noexcept { return data_.empty(); }
-
-        value_type *data() noexcept { return data_.data(); }
-        const value_type *data() const noexcept { return data_.data(); }
-
-        [[nodiscard]] size_type width() const noexcept { return width_; }
-        [[nodiscard]] size_type height() const noexcept { return height_; }
-
-    private:
-        explicit ImageBase(value_type *ptr, size_type width = 0, size_type height = 0)
-            : width_(width)
-              , height_(height) {
-            data_.resize(width * height);
-            auto c = data_.data();
-            const auto &a = data_.data();
-            auto &b = const_cast<value_type *&>(a);
-            b = ptr;
-            delete[] c;
+        iterator_type begin() noexcept {
+            return data_.begin();
         }
 
-        friend class Image;
+        iterator_type end() noexcept {
+            return data_.end();
+        }
 
-        std::vector<value_type> data_;
-        size_type width_;
-        size_type height_;
-    };
+        const_iterator_type begin() const noexcept {
+            return data_.begin();
+        }
 
-    class Image255 : public ImageBase<uint8_t> {
-    public:
-        using ImageBase::size_type;
-        using ImageBase::ImageBase;
+        const_iterator_type end() const noexcept {
+            return data_.end();
+        }
+
+        const_iterator_type cbegin() const noexcept {
+            return data_.cbegin();
+        }
+
+        const_iterator_type cend() const noexcept {
+            return data_.cend();
+        }
+
+        [[nodiscard]] size_t size() const noexcept {
+            return data_.size();
+        }
+
+        [[nodiscard]] bool empty() const noexcept {
+            return data_.empty();
+        }
+
+        value_type *data() noexcept {
+            return data_.data();
+        }
+
+        const value_type *data() const noexcept {
+            return data_.data();
+        }
+
+        [[nodiscard]] size_t width() const noexcept {
+            return width_;
+        }
+
+        [[nodiscard]] size_t height() const noexcept {
+            return height_;
+        }
+
+    private:
+        ImVector<T> data_;
+        size_t width_;
+        size_t height_;
     };
 
     template<typename T = uint8_t>
+    class ImageGray : public ImageBase<T> {
+    public:
+        using ImageBase<T>::ImageBase;
+        using ImageBase<T>::value_type;
+        using ImageBase<T>::iterator_type;
+        using ImageBase<T>::const_iterator_type;
+        using ImageBase<T>::vector;
+    };
+
+    template<typename T>
     struct PixelRGB {
         union {
             struct {
@@ -111,125 +132,132 @@ namespace improcessing {
         }
     };
 
-    class Image255RGB : public ImageBase<PixelRGB<uint8_t> > {
-    public:
-        using ImageBase::ImageBase;
-    };
-
-    class Image {
+    template<typename T = uint8_t>
+    class ImageRGB {
     public:
         enum class Type {
             kRGB,
             kGray
         };
 
-        using gray_type = Image255::value_type;
-        using size_type = Image255::size_type;
-        using rgb_type = Image255RGB::value_type;
-        using iterator_type = Image255RGB::iterator_type;
-        using const_iterator_type = Image255RGB::const_iterator_type;
+        using ImageGray = ImageBase<T>;
 
-        static constexpr auto kAmountRgb = sizeof(rgb_type) / sizeof(gray_type);
+        using gray_type = ImageGray::value_type;
+        using vector_gray = ImageGray::vector;
+        using iterator_gray_type = ImageGray::iterator_type;
+        using const_iterator_gray_type = ImageGray::const_iterator_type;
 
-        explicit Image(size_type width = 0, size_type height = 0, Type type = Type::kGray) {
-            if (type == Type::kRGB) {
-                width = width * kAmountRgb;
-                height = height * kAmountRgb;
-            }
+        using rgb_type = PixelRGB<T>;
+        using vector_rgb = ImageBase<rgb_type>;
+        using iterator_rgb_type = GenericIterator<false, rgb_type>;
+        using const_iterator_rgb_type = GenericIterator<true, rgb_type>;
 
-            new(&image_.gray_) Image255(width, height);
+        explicit ImageRGB(size_t width = 0, size_t height = 0, Type type = Type::kGray) : image_(
+            GetResizeFrom(width, type), GetResizeFrom(height, type)) {
         }
 
-        Image(size_type width, size_type height, std::vector<gray_type> &&data) {
-            new(&image_.gray_) Image255(width, height, std::move(data));
+        ImageRGB(size_t width, size_t height, vector_gray &&data, Type type = Type::kGray) : image_(
+            GetResizeFrom(width, type), GetResizeFrom(height, type), std::move(data)) {
         }
 
-        Image(size_type width, size_type height, std::vector<rgb_type> &&data) {
-            new(&image_.gray_) Image255((gray_type *) data.data(), width * kAmountRgb,
-                                        height * kAmountRgb);
+        [[nodiscard]] auto GetGrayPtrs() const -> ImVector<gray_type *> {
+            return std::move(image_.get_ptrs());
         }
 
-        Image(Image &&other) noexcept {
-            new(&image_.gray_) Image255(std::move(other.image_.gray_));
+        auto operator()(size_t x, size_t y) -> gray_type & {
+            return image_(x, y);
         }
 
-        Image &operator=(Image &&other) noexcept {
-            if (this != &other) {
-                image_.gray_.~Image255();
-                new(&image_.gray_) Image255(std::move(other.image_.gray_));
-            }
-
-            return *this;
+        auto operator()(size_t x, size_t y) const -> gray_type const & {
+            return image_(x, y);
         }
 
-        ~Image() {
-            image_.gray_.~Image255();
+        auto ResizeGray(size_t new_width, size_t new_height) -> void {
+            image_.resize(new_width, new_height);
         }
 
-        [[nodiscard]] auto get_ptrs() const -> std::vector<gray_type *> {
-            return image_.gray_.get_ptrs();
+        auto ResizeRgb(size_t new_width, size_t new_height) -> void {
+            image_.resize(new_width * kAmountRgb, new_height * kAmountRgb);
         }
 
-        rgb_type &operator()(size_type x, size_type y) {
-            return image_.rgb_(x, y);
+        auto begin() noexcept -> iterator_rgb_type {
+            return static_cast<iterator_rgb_type>(image_.begin());
         }
 
-        const rgb_type &operator()(size_type x, size_type y) const {
-            return image_.rgb_(x, y);
+        auto end() noexcept -> iterator_rgb_type {
+            return static_cast<iterator_rgb_type>(image_.end());
         }
 
-        void resize(size_type new_width, size_type new_height, Type type = Type::kGray) {
-            if (type == Type::kRGB) {
-                image_.gray_.resize(new_width * kAmountRgb, new_height * kAmountRgb);
-            } else {
-                image_.gray_.resize(new_width, new_height);
-            }
+        auto begin() const noexcept -> const_iterator_rgb_type {
+            return static_cast<const_iterator_rgb_type>(image_.begin());
         }
 
-        iterator_type begin() noexcept { return image_.rgb_.begin(); }
-        iterator_type end() noexcept { return image_.rgb_.end(); }
-
-        const_iterator_type begin() const noexcept { return image_.rgb_.begin(); }
-        const_iterator_type end() const noexcept { return image_.rgb_.end(); }
-
-        const_iterator_type cbegin() const noexcept { return image_.rgb_.cbegin(); }
-        const_iterator_type cend() const noexcept { return image_.rgb_.cend(); }
-
-        [[nodiscard]] size_type size() const noexcept { return image_.gray_.size(); }
-
-        [[nodiscard]] bool empty() const noexcept {
-            return image_.gray_.empty();
+        auto end() const noexcept -> const_iterator_rgb_type {
+            return static_cast<const_iterator_rgb_type>(image_.end());
         }
 
-        gray_type *data() noexcept { return image_.gray_.data(); }
-        const gray_type *data() const noexcept { return image_.gray_.data(); }
-
-        [[nodiscard]] size_type width(Type type = Type::kGray) const noexcept {
-            if (type == Type::kRGB) {
-                return image_.gray_.width_ / kAmountRgb;
-            }
-
-            return image_.gray_.width_;
+        auto cbegin() const noexcept -> const_iterator_rgb_type {
+            return static_cast<const_iterator_rgb_type>(image_.cbegin());
         }
 
-        [[nodiscard]] size_type height(Type type = Type::kGray) const noexcept {
-            if (type == Type::kRGB) {
-                return image_.gray_.height_ / kAmountRgb;
-            }
+        auto cend() const noexcept -> const_iterator_rgb_type {
+            return static_cast<const_iterator_rgb_type>(image_.cend());
+        }
 
-            return image_.gray_.height_;
+        [[nodiscard]] size_t size() const noexcept {
+            return image_.size();
+        }
+
+        [[nodiscard]] bool Empty() const noexcept {
+            return image_.empty();
+        }
+
+        gray_type *DataGray() noexcept {
+            return image_.data();
+        }
+
+        const gray_type *DataGray() const noexcept {
+            return image_.data();
+        }
+
+        rgb_type *DataRgb() noexcept {
+            return static_cast<rgb_type *>(image_.data());
+        }
+
+        const rgb_type *DataRgb() const noexcept {
+            return static_cast<rgb_type *>(image_.data());
+        }
+
+        [[nodiscard]] size_t WidthGray() const noexcept {
+            return image_.width();
+        }
+
+        [[nodiscard]] size_t HeightGray() const noexcept {
+            return image_.height();
+        }
+
+        [[nodiscard]] size_t WidthRgb() const noexcept {
+            return image_.width() / kAmountRgb;
+        }
+
+        [[nodiscard]] size_t HeightRgb() const noexcept {
+            return image_.height() / kAmountRgb;
         }
 
     private:
-        union Storage {
-            Image255RGB rgb_;
-            Image255 gray_;
+        static constexpr auto kAmountRgb = sizeof(rgb_type) / sizeof(T);
 
-            Storage() {
+        constexpr auto GetResizeFrom(size_t from, Type type) const noexcept -> size_t {
+            switch (type) {
+                case Type::kRGB:
+                    return from * kAmountRgb;
+                default:
+                    return from;
             }
+        }
 
-            ~Storage() {
-            }
-        } image_;
+        ImageGray image_;
     };
+
+    using Image = ImageRGB<uint8_t>;
 } // namespace improcessing
