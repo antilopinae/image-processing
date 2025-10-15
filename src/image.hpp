@@ -34,7 +34,7 @@ namespace improcessing {
                 row_ptrs[y] = const_cast<value_type *>(data()) + y * width_;
             }
 
-            return std::move(row_ptrs);
+            return row_ptrs;
         }
 
         value_type &operator()(size_t x, size_t y) {
@@ -153,15 +153,23 @@ namespace improcessing {
         using const_iterator_rgb_type = GenericIterator<true, rgb_type>;
 
         explicit ImageRGB(size_t width = 0, size_t height = 0, Type type = Type::kGray) : image_(
-            GetResizeFrom(width, type), GetResizeFrom(height, type)) {
+            GetWidthFrom(width, type), height) {
         }
 
         ImageRGB(size_t width, size_t height, vector_gray &&data, Type type = Type::kGray) : image_(
-            GetResizeFrom(width, type), GetResizeFrom(height, type), std::move(data)) {
+            GetWidthFrom(width, type), height, std::move(data)) {
         }
 
         [[nodiscard]] auto GetGrayPtrs() const -> ImVector<gray_type *> {
-            return std::move(image_.get_ptrs());
+            return image_.get_ptrs();
+        }
+
+        [[nodiscard]] auto GetRgbPtrs() const -> ImVector<rgb_type *> {
+            auto gray_ptrs = image_.get_ptrs();
+            ImVector<rgb_type *> vec(gray_ptrs.size());
+            memcpy(vec, gray_ptrs, sizeof(vec));
+
+            return vec;
         }
 
         auto operator()(size_t x, size_t y) -> gray_type & {
@@ -177,7 +185,7 @@ namespace improcessing {
         }
 
         auto ResizeRgb(size_t new_width, size_t new_height) -> void {
-            image_.resize(new_width * kAmountRgb, new_height * kAmountRgb);
+            image_.resize(new_width * kAmountRgb, new_height);
         }
 
         auto begin() noexcept -> iterator_rgb_type {
@@ -241,13 +249,13 @@ namespace improcessing {
         }
 
         [[nodiscard]] size_t HeightRgb() const noexcept {
-            return image_.height() / kAmountRgb;
+            return image_.height();
         }
 
     private:
         static constexpr auto kAmountRgb = sizeof(rgb_type) / sizeof(T);
 
-        constexpr auto GetResizeFrom(size_t from, Type type) const noexcept -> size_t {
+        constexpr auto GetWidthFrom(size_t from, Type type) const noexcept -> size_t {
             switch (type) {
                 case Type::kRGB:
                     return from * kAmountRgb;

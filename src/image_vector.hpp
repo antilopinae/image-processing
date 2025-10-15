@@ -1,9 +1,10 @@
+#pragma once
+
 #include <memory>
 #include <algorithm>
 #include <stdexcept>
 #include <concepts>
 #include <utility>
-#include <memory>
 #include <functional>
 
 namespace improcessing {
@@ -101,9 +102,6 @@ namespace improcessing {
         explicit ImVector(size_t count) : size_(count), capacity_(count) {
             if (count > 0) {
                 data_ = std::make_unique<T[]>(capacity_);
-                for (size_t i = 0; i < size_; ++i) {
-                    new(data_.get() + i) T();
-                }
             }
         }
 
@@ -111,7 +109,7 @@ namespace improcessing {
             if (count > 0) {
                 data_ = std::make_unique<T[]>(capacity_);
                 for (size_t i = 0; i < size_; ++i) {
-                    new(data_.get() + i) T(value);
+                    *(data_.get() + i) = T(value);
                 }
             }
         }
@@ -168,18 +166,22 @@ namespace improcessing {
         }
 
         value_type &operator[](size_t index) {
+            if (index >= size_) throw std::out_of_range("ImVector::[]: index out of range");
             return data_[index];
         }
 
         const value_type &operator[](size_t index) const {
+            if (index >= size_) throw std::out_of_range("ImVector::[]: index out of range");
             return data_[index];
         }
 
         value_type &at(size_t index) {
+            if (index >= size_) throw std::out_of_range("ImVector::at: index out of range");
             return data_[index];
         }
 
         const value_type &at(size_t index) const {
+            if (index >= size_) throw std::out_of_range("ImVector::at: index out of range");
             return data_[index];
         }
 
@@ -267,17 +269,13 @@ namespace improcessing {
             return capacity_;
         }
 
-        size_t max_size() const noexcept {
-            return std::numeric_limits<size_t>::max();
-        }
-
         void reserve(size_t new_capacity) {
             if (new_capacity > capacity_) {
                 std::unique_ptr<T[]> new_data = std::make_unique<T[]>(new_capacity);
 
                 if (data_) {
                     for (size_t i = 0; i < size_; ++i) {
-                        new(new_data.get() + i) T(std::move(data_[i]));
+                        *(new_data.get() + i) = T(std::move(data_[i]));
                     }
                 }
 
@@ -287,6 +285,9 @@ namespace improcessing {
         }
 
         void clear() noexcept {
+            for (size_t i = 0; i < size_; ++i) {
+                data_[i].~T();
+            }
             size_ = 0;
         }
 
@@ -294,7 +295,7 @@ namespace improcessing {
             if (size_ == capacity_) {
                 reserve(capacity_ == 0 ? 1 : capacity_ * 2);
             }
-            new(data_.get() + size_) T(value);
+            *(data_.get() + size_) = T(value);
             size_++;
         }
 
@@ -302,7 +303,7 @@ namespace improcessing {
             if (size_ == capacity_) {
                 reserve(capacity_ == 0 ? 1 : capacity_ * 2);
             }
-            new(data_.get() + size_) T(std::move(value));
+            *(data_.get() + size_) = T(std::move(value));
             size_++;
         }
 
@@ -311,7 +312,7 @@ namespace improcessing {
             if (size_ == capacity_) {
                 reserve(capacity_ == 0 ? 1 : capacity_ * 2);
             }
-            new(data_.get() + size_) T(std::forward<Args>(args)...);
+            *(data_.get() + size_) = T(std::forward<Args>(args)...);
             size_++;
             return data_[size_ - 1];
         }
@@ -336,7 +337,7 @@ namespace improcessing {
                     reserve(count);
                 }
                 for (size_t i = size_; i < count; ++i) {
-                    new(data_.get() + i) T(value);
+                    *(data_.get() + i) = T(value);
                 }
                 size_ = count;
             }
