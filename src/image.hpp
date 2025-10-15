@@ -47,6 +47,8 @@ namespace improcessing {
 
         void resize(size_t new_width, size_t new_height) {
             data_.resize(new_width * new_height);
+            width_ = new_width;
+            height_ = new_height;
         }
 
         iterator_type begin() noexcept {
@@ -229,7 +231,7 @@ namespace improcessing {
         }
 
         rgb_type *DataRgb() noexcept {
-            return static_cast<rgb_type *>(image_.data());
+            return reinterpret_cast<rgb_type *>(image_.data());
         }
 
         const rgb_type *DataRgb() const noexcept {
@@ -253,14 +255,14 @@ namespace improcessing {
         }
 
     private:
-        static constexpr auto kAmountRgb = sizeof(rgb_type) / sizeof(T);
+        static constexpr auto kAmountRgb = sizeof(rgb_type) / sizeof(gray_type);
 
-        constexpr auto GetWidthFrom(size_t from, Type type) const noexcept -> size_t {
+        constexpr auto GetWidthFrom(size_t width, Type type) const noexcept -> size_t {
             switch (type) {
                 case Type::kRGB:
-                    return from * kAmountRgb;
+                    return width * kAmountRgb;
                 default:
-                    return from;
+                    return width;
             }
         }
 

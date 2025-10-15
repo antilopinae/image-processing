@@ -39,31 +39,8 @@ find_package(PNG REQUIRED)
 
 # pkg_check_modules(LIBBPF REQUIRED IMPORTED_TARGET libbpf)
 
-# main executable
-add_executable(${PROJECT_NAME}
-        src/main.cpp
-        src/improcessing.cpp
-)
-
-target_include_directories(${PROJECT_NAME} PUBLIC
-        ${CMAKE_SOURCE_DIR}/src
-)
-
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build only static libraries" FORCE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-target_link_options(${PROJECT_NAME} PRIVATE -static)
 
-if(UNIX)
-    target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++)
-endif()
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-        Boost::system
-        fmt::fmt-header-only
-        argparse::argparse
-        PNG::PNG
-)
-
-# tests
+add_subdirectory(src)
 add_subdirectory(src/tests)
-

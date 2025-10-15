@@ -3,13 +3,17 @@ find_package(GTest REQUIRED)
 enable_testing()
 
 add_executable(${PROJECT_NAME}-tests
-        simple_tests.cpp
-        floyd_tests.cpp
-        #        image_tests.cpp # redundant
+    image_vector_tests.cpp
+    image_tests.cpp
+    floyd_tests.cpp
 )
 
 target_include_directories(${PROJECT_NAME}-tests PUBLIC
-        ${CMAKE_SOURCE_DIR}/src/tests
+    ${CMAKE_SOURCE_DIR}/src/tests
 )
 
-target_link_libraries(${PROJECT_NAME}-tests PRIVATE GTest::gtest GTest::gtest_main)
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE
+    ${PROJECT_NAME}-core
+    GTest::gtest
+    GTest::gtest_main
+)
