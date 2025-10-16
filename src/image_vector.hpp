@@ -6,152 +6,18 @@
 #include <concepts>
 #include <utility>
 #include <functional>
+#include <image_iterator.hpp>
 
 namespace improcessing {
-    template<typename T>
-    struct Pixel {
-        union {
-            struct {
-                T r;
-                T g;
-                T b;
-            };
-
-            T data[3];
-        };
-
-        explicit Pixel() : r(0), g(0), b(0) {
-        }
-
-        Pixel(T r_, T g_, T b_) : r(r_), g(g_), b(b_) {
-        }
-    };
-
-    template<bool IsConst, typename T>
-    class GenericIterator {
-    public:
-        using iterator_category = std::random_access_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using value_type = T;
-
-        explicit GenericIterator(value_type *ptr) : ptr_(ptr) {
-        }
-
-        value_type &operator*() const {
-            return *ptr_;
-        }
-
-        value_type *operator->() const {
-            return ptr_;
-        }
-
-        GenericIterator &operator++() {
-            for (int i = 0; i < step_; ++i) {
-                ++ptr_;
-            }
-            return *this;
-        }
-
-        GenericIterator operator++(int) {
-            GenericIterator temp = *this;
-            for (int i = 0; i < step_; ++i) {
-                ++(*this);
-            }
-            return temp;
-        }
-
-        GenericIterator &operator--() {
-            for (int i = 0; i < step_; ++i) {
-                --ptr_;
-            }
-            return *this;
-        }
-
-        GenericIterator operator--(int) {
-            GenericIterator temp = *this;
-            for (int i = 0; i < step_; ++i) {
-                --(*this);
-            }
-            return temp;
-        }
-
-        GenericIterator &operator+=(difference_type n) {
-            ptr_ += n * step_;
-            return *this;
-        }
-
-        GenericIterator operator+(difference_type n) const {
-            GenericIterator temp = *this;
-            return temp += n * step_;
-        }
-
-        GenericIterator &operator-=(difference_type n) {
-            ptr_ -= n * step_;
-            return *this;
-        }
-
-        GenericIterator operator-(difference_type n) const {
-            GenericIterator temp = *this;
-            return temp -= n * step_;
-        }
-
-        difference_type operator-(const GenericIterator &other) const {
-            return (ptr_ - other.ptr_) / step_;
-        }
-
-        bool operator==(const GenericIterator &other) const {
-            return ptr_ == other.ptr_;
-        }
-
-        bool operator!=(const GenericIterator &other) const {
-            return !(*this == other);
-        }
-
-        bool operator<(const GenericIterator &other) const {
-            return ptr_ < other.ptr_;
-        }
-
-        bool operator>(const GenericIterator &other) const {
-            return ptr_ > other.ptr_;
-        }
-
-        bool operator<=(const GenericIterator &other) const {
-            return ptr_ <= other.ptr_;
-        }
-
-        bool operator>=(const GenericIterator &other) const {
-            return ptr_ >= other.ptr_;
-        }
-
-        template<typename U>
-        explicit operator GenericIterator<IsConst, U>() const {
-            auto v = GenericIterator<IsConst, U>(reinterpret_cast<U *>(ptr_));
-            v.set_step(sizeof(U) / sizeof(T));
-            static_assert(sizeof(U) > sizeof(T), "Cast Type U must be larger than T");
-            return v;
-        }
-
-    private:
-        template<bool B, typename U>
-        friend class GenericIterator;
-
-        void set_step(difference_type step) noexcept {
-            step_ = step;
-        }
-
-        value_type *ptr_;
-        difference_type step_ = 1;
-    };
-
     template<typename T>
     class ImVector {
     public:
         using value_type = T;
 
-        using iterator = GenericIterator<false, value_type>;
-        using const_iterator = GenericIterator<true, value_type>;
-        using reverse_iterator = std::reverse_iterator<GenericIterator<false, value_type> >;
-        using const_reverse_iterator = std::reverse_iterator<GenericIterator<true, value_type> >;
+        using iterator = ImageIterator<false, value_type>;
+        using const_iterator = ImageIterator<true, value_type>;
+        using reverse_iterator = std::reverse_iterator<ImageIterator<false, value_type> >;
+        using const_reverse_iterator = std::reverse_iterator<ImageIterator<true, value_type> >;
 
         explicit ImVector() : size_(0), capacity_(0), data_(nullptr) {
         }

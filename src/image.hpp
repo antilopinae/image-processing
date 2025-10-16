@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <image_vector.hpp>
-#include <fmt/base.h>
+#include <pixel_rgb.hpp>
 
 namespace improcessing {
     template<typename T>
@@ -130,10 +130,10 @@ namespace improcessing {
         using iterator_gray_type = ImageGray::iterator_type;
         using const_iterator_gray_type = ImageGray::const_iterator_type;
 
-        using rgb_type = Pixel<T>;
+        using rgb_type = PixelRGB<T>;
         using vector_rgb = ImageBase<rgb_type>;
-        using iterator_rgb_type = GenericIterator<false, rgb_type>;
-        using const_iterator_rgb_type = GenericIterator<true, rgb_type>;
+        using iterator_rgb_type = ImageIterator<false, rgb_type>;
+        using const_iterator_rgb_type = ImageIterator<true, rgb_type>;
 
         explicit ImageRGB(size_t width = 0, size_t height = 0, Type type = Type::kGray) : image_(
             GetWidthFrom(width, type), height) {

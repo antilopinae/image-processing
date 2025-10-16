@@ -146,6 +146,17 @@ namespace improcessing {
     auto FloydSteinbergDither(Image &img, uint8_t n_levels) -> std::expected<void, boost::system::error_code> {
         const int rows = img.HeightGray();
         const int cols = img.WidthGray();
+        const int levels = 1 << n_levels;
+
+        struct {
+            Image::gray_type newval;
+        } lut[256];
+
+        for (int i = 0; i < 256; ++i) {
+            int nearest = (i * (levels - 1) + 127) / 255;
+            int quantized = (nearest * 255 + (levels - 1) / 2) / (levels - 1);
+            lut[i] = {static_cast<Image::gray_type>(quantized)};
+        }
 
         int err;
         auto apply_error = [&](int x, int y, int num, int den) {
@@ -155,23 +166,19 @@ namespace improcessing {
             }
         };
 
-        int levels = 1 << n_levels;
-
-        bool reverse = false;
-        int start, end, step, oldval, newval, nearest_level;
-
         for (int y = 0; y < rows; ++y) {
-            reverse = (y % 2 != 0);
-            start = reverse ? cols - 1 : 0;
-            end = reverse ? -1 : cols;
-            step = reverse ? -1 : 1;
+            const bool reverse = y & 1;
+            const auto start = reverse ? cols - 1 : 0;
+            const auto end = reverse ? -1 : cols;
+            const auto step = reverse ? -1 : 1;
 
             for (int x = start; x != end; x += step) {
-                oldval = img(x, y);
-                nearest_level = (oldval * (levels - 1) + 127) / 255;
-                newval = (nearest_level * 255 + (levels - 1) / 2) / (levels - 1);
-                img(x, y) = newval;
-                err = oldval - newval;
+                const auto old_val = img(x, y);
+                const auto entry = lut[old_val];
+                const auto new_val = entry.newval;
+                img(x, y) = new_val;
+
+                err = old_val - new_val;
 
                 if (!reverse) {
                     apply_error(x + 1, y, 7, 16);
