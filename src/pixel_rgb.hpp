@@ -18,5 +18,13 @@ namespace improcessing {
 
         PixelRGB(T r_, T g_, T b_) : r(r_), g(g_), b(b_) {
         }
+
+        bool operator==(const PixelRGB &other) const {
+            return r == other.r && g == other.g && b == other.b;
+        }
+
+        bool operator!=(const PixelRGB &other) const {
+            return !(*this == other);
+        }
     };
 }

@@ -60,14 +60,14 @@ TEST(ImageRGB, DefaultConstructor_UnitTest) {
 }
 
 TEST(ImageRGB, GrayImageInitialization_UnitTest) {
-    Image img(4, 3, ImageRGB<uint8_t>::Type::kGray);
+    Image img(4, 3, Image::Type::kGray);
     EXPECT_EQ(img.WidthGray(), 4);
     EXPECT_EQ(img.HeightGray(), 3);
     EXPECT_EQ(img.size(), 12);
 }
 
 TEST(ImageRGB, RGBImageInitialization_UnitTest) {
-    Image img(2, 2, ImageRGB<uint8_t>::Type::kRGB);
+    Image img(2, 2, Image::Type::kRGB);
     EXPECT_EQ(img.WidthRgb(), 2);
     EXPECT_EQ(img.HeightRgb(), 2);
     EXPECT_EQ(img.WidthGray(), 2 * 3); // 3 channels
@@ -75,7 +75,7 @@ TEST(ImageRGB, RGBImageInitialization_UnitTest) {
 }
 
 TEST(ImageRGB, ElementWriteAndReadGray_UnitTest) {
-    Image img(2, 2, ImageRGB<uint8_t>::Type::kGray);
+    Image img(2, 2, Image::Type::kGray);
     img(1, 1) = 77;
     EXPECT_EQ(img(1, 1), 77);
 }
@@ -89,7 +89,7 @@ TEST(ImageRGB, ResizeGray_UnitTest) {
 }
 
 TEST(ImageRGB, ResizeRgb_UnitTest) {
-    Image img(2, 2, ImageRGB<uint8_t>::Type::kRGB);
+    Image img(2, 2, Image::Type::kRGB);
     img.ResizeRgb(5, 4);
     EXPECT_EQ(img.WidthRgb(), 5);
     EXPECT_EQ(img.HeightRgb(), 4);
@@ -97,14 +97,24 @@ TEST(ImageRGB, ResizeRgb_UnitTest) {
 }
 
 TEST(ImageRGB, GetGrayPtrsReturnsValidData_UnitTest) {
-    Image img(2, 2, ImageRGB<uint8_t>::Type::kGray);
+    Image img(2, 2, Image::Type::kGray);
     img(0, 0) = 10;
     auto gray_ptrs = img.GetGrayPtrs();
     EXPECT_EQ(gray_ptrs[0][0], 10);
 }
 
+TEST(ImageRGB, GetRGBPtrsReturnsValidData_UnitTest) {
+    Image img(3, 1, Image::Type::kGray);
+    img(0, 0) = 1;
+    img(1, 0) = 2;
+    img(2, 0) = 3;
+    auto rgb_ptrs = img.GetRgbPtrs();
+    auto pixel = PixelRGB<uint8_t>{1, 2, 3};
+    EXPECT_EQ(rgb_ptrs[0][0], pixel);
+}
+
 TEST(ImageRGB, DataRgbPointerCastsCorrectly_UnitTest) {
-    Image img(3, 2, ImageRGB<uint8_t>::Type::kRGB);
+    Image img(3, 2, Image::Type::kRGB);
     img(0, 0) = 1;
     img(1, 0) = 2;
     img(2, 0) = 3;
@@ -122,7 +132,7 @@ TEST(ImageRGB, EmptyReturnsTrueWhenNoData_UnitTest) {
 }
 
 TEST(ImageRGB, Iterators_UnitTest) {
-    Image img(3, 2, ImageRGB<uint8_t>::Type::kRGB);
+    Image img(3, 2, Image::Type::kRGB);
     img(0, 0) = 1;
     img(1, 0) = 2;
     img(2, 0) = 3;

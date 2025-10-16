@@ -149,8 +149,10 @@ namespace improcessing {
 
         [[nodiscard]] auto GetRgbPtrs() const -> ImVector<rgb_type *> {
             auto gray_ptrs = image_.get_ptrs();
-            ImVector<rgb_type *> vec(gray_ptrs.size());
-            memcpy(vec, gray_ptrs, sizeof(vec));
+            const auto size = gray_ptrs.size();
+            auto data_ptr = reinterpret_cast<rgb_type **>(gray_ptrs.release());
+
+            ImVector<rgb_type *> vec(size, size, data_ptr);
 
             return vec;
         }

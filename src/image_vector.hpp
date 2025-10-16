@@ -12,6 +12,7 @@ namespace improcessing {
     template<typename T>
     class ImVector {
     public:
+        // remove ref and others from T - fuck
         using value_type = T;
 
         using iterator = ImageIterator<false, value_type>;
@@ -24,29 +25,33 @@ namespace improcessing {
 
         explicit ImVector(size_t count) : size_(count), capacity_(count) {
             if (count > 0) {
-                data_ = std::make_unique<T[]>(capacity_);
+                data_ = std::make_unique<value_type[]>(capacity_);
             }
+        }
+
+        ImVector(size_t count, size_t capacity, value_type *data) noexcept : size_(count), capacity_(capacity),
+                                                                             data_(data) {
         }
 
         ImVector(size_t count, const value_type &value) : size_(count), capacity_(count) {
             if (count > 0) {
-                data_ = std::make_unique<T[]>(capacity_);
+                data_ = std::make_unique<value_type[]>(capacity_);
                 for (size_t i = 0; i < size_; ++i) {
                     *(data_.get() + i) = T(value);
                 }
             }
         }
 
-        ImVector(std::initializer_list<T> init) : size_(init.size()), capacity_(init.size()) {
+        ImVector(std::initializer_list<value_type> init) : size_(init.size()), capacity_(init.size()) {
             if (init.size() > 0) {
-                data_ = std::make_unique<T[]>(capacity_);
+                data_ = std::make_unique<value_type[]>(capacity_);
                 std::copy(init.begin(), init.end(), data_.get());
             }
         }
 
         ImVector(const ImVector &other) : size_(other.size_), capacity_(other.capacity_) {
             if (other.size_ > 0) {
-                data_ = std::make_unique<T[]>(capacity_);
+                data_ = std::make_unique<value_type[]>(capacity_);
                 std::copy(other.data_.get(), other.data_.get() + other.size_, data_.get());
             }
         }
@@ -57,10 +62,10 @@ namespace improcessing {
               data_(std::exchange(other.data_, nullptr)) {
         }
 
-        ImVector &operator=(const ImVector &other) {
+        auto operator=(const ImVector &other) -> ImVector & {
             if (this != &other) {
                 if (capacity_ < other.size_) {
-                    data_ = std::make_unique<T[]>(other.capacity_);
+                    data_ = std::make_unique<value_type[]>(other.capacity_);
                     capacity_ = other.capacity_;
                 }
                 size_ = other.size_;
@@ -69,7 +74,7 @@ namespace improcessing {
             return *this;
         }
 
-        ImVector &operator=(ImVector &&other) noexcept {
+        auto operator=(ImVector &&other) noexcept -> ImVector & {
             if (this != &other) {
                 data_ = std::exchange(other.data_, nullptr);
                 size_ = std::exchange(other.size_, 0);
@@ -78,9 +83,9 @@ namespace improcessing {
             return *this;
         }
 
-        ImVector &operator=(std::initializer_list<T> ilist) {
+        auto operator=(std::initializer_list<value_type> ilist) -> ImVector & {
             if (capacity_ < ilist.size()) {
-                data_ = std::make_unique<T[]>(ilist.size());
+                data_ = std::make_unique<value_type[]>(ilist.size());
                 capacity_ = ilist.size();
             }
             size_ = ilist.size();
@@ -88,117 +93,117 @@ namespace improcessing {
             return *this;
         }
 
-        value_type &operator[](size_t index) {
+        auto operator[](size_t index) -> value_type & {
             if (index >= size_) throw std::out_of_range("ImVector::[]: index out of range");
             return data_[index];
         }
 
-        const value_type &operator[](size_t index) const {
+        auto operator[](size_t index) const -> const value_type & {
             if (index >= size_) throw std::out_of_range("ImVector::[]: index out of range");
             return data_[index];
         }
 
-        value_type &at(size_t index) {
+        auto at(size_t index) -> value_type & {
             if (index >= size_) throw std::out_of_range("ImVector::at: index out of range");
             return data_[index];
         }
 
-        const value_type &at(size_t index) const {
+        auto at(size_t index) const -> const value_type & {
             if (index >= size_) throw std::out_of_range("ImVector::at: index out of range");
             return data_[index];
         }
 
-        value_type &front() {
+        auto front() -> value_type & {
             return data_[0];
         }
 
-        const value_type &front() const {
+        auto front() const -> const value_type & {
             return data_[0];
         }
 
-        value_type &back() {
+        auto back() -> value_type & {
             return data_[size_ - 1];
         }
 
-        const value_type &back() const {
+        auto back() const -> const value_type & {
             return data_[size_ - 1];
         }
 
-        value_type *data() noexcept {
+        auto data() noexcept -> value_type * {
             return data_.get();
         }
 
-        const value_type *data() const noexcept {
+        auto data() const noexcept -> const value_type * {
             return data_.get();
         }
 
-        iterator begin() noexcept {
+        auto begin() noexcept -> iterator {
             return iterator(data_.get());
         }
 
-        const_iterator begin() const noexcept {
+        auto begin() const noexcept -> const_iterator {
             return const_iterator(data_.get());
         }
 
-        const_iterator cbegin() const noexcept {
+        auto cbegin() const noexcept -> const_iterator {
             return const_iterator(data_.get());
         }
 
-        iterator end() noexcept {
+        auto end() noexcept -> iterator {
             return iterator(data_.get() + size_);
         }
 
-        const_iterator end() const noexcept {
+        auto end() const noexcept -> const_iterator {
             return const_iterator(data_.get() + size_);
         }
 
-        const_iterator cend() const noexcept {
+        auto cend() const noexcept -> const_iterator {
             return const_iterator(data_.get() + size_);
         }
 
-        reverse_iterator rbegin() noexcept {
-            return reverse_iterator(end());
-        }
-
-        const_reverse_iterator rbegin() const noexcept {
-            return const_reverse_iterator(cend());
-        }
-
-        const_reverse_iterator crbegin() const noexcept {
-            return const_reverse_iterator(cend());
-        }
-
-        reverse_iterator rend() noexcept {
+        auto rend() noexcept -> reverse_iterator {
             return reverse_iterator(begin());
         }
 
-        const_reverse_iterator rend() const noexcept {
+        auto rbegin() noexcept -> reverse_iterator {
+            return reverse_iterator(end());
+        }
+
+        auto rbegin() const noexcept -> const_reverse_iterator {
+            return const_reverse_iterator(cend());
+        }
+
+        auto crbegin() const noexcept -> const_reverse_iterator {
+            return const_reverse_iterator(cend());
+        }
+
+        auto rend() const noexcept -> const_reverse_iterator {
             return const_reverse_iterator(cbegin());
         }
 
-        const_reverse_iterator crend() const noexcept {
+        auto crend() const noexcept -> const_reverse_iterator {
             return const_reverse_iterator(cbegin());
         }
 
-        bool empty() const noexcept {
+        auto empty() const noexcept -> bool {
             return size_ == 0;
         }
 
-        size_t size() const noexcept {
+        auto size() const noexcept -> size_t {
             return size_;
         }
 
-        size_t capacity() const noexcept {
+        auto capacity() const noexcept -> size_t {
             return capacity_;
         }
 
-        void reserve(size_t new_capacity) {
+        auto reserve(size_t new_capacity) -> void {
             if (new_capacity > capacity_) {
-                std::unique_ptr<T[]> new_data = std::make_unique<T[]>(new_capacity);
+                auto new_data = std::make_unique<value_type[]>(new_capacity);
 
                 if (data_) {
                     for (size_t i = 0; i < size_; ++i) {
-                        *(new_data.get() + i) = T(std::move(data_[i]));
+                        *(new_data.get() + i) = value_type(std::move(data_[i]));
                     }
                 }
 
@@ -207,49 +212,49 @@ namespace improcessing {
             }
         }
 
-        void clear() noexcept {
+        auto clear() noexcept -> void {
             for (size_t i = 0; i < size_; ++i) {
                 data_[i].~T();
             }
             size_ = 0;
         }
 
-        void push_back(const value_type &value) {
+        auto push_back(const value_type &value) -> void {
             if (size_ == capacity_) {
                 reserve(capacity_ == 0 ? 1 : capacity_ * 2);
             }
-            *(data_.get() + size_) = T(value);
+            *(data_.get() + size_) = value_type(value);
             size_++;
         }
 
-        void push_back(T &&value) {
+        auto push_back(value_type &&value) -> void {
             if (size_ == capacity_) {
                 reserve(capacity_ == 0 ? 1 : capacity_ * 2);
             }
-            *(data_.get() + size_) = T(std::move(value));
+            *(data_.get() + size_) = value_type(std::move(value));
             size_++;
         }
 
         template<typename... Args>
-        value_type &emplace_back(Args &&... args) {
+        auto emplace_back(Args &&... args) -> value_type & {
             if (size_ == capacity_) {
                 reserve(capacity_ == 0 ? 1 : capacity_ * 2);
             }
-            *(data_.get() + size_) = T(std::forward<Args>(args)...);
+            *(data_.get() + size_) = value_type(std::forward<Args>(args)...);
             size_++;
             return data_[size_ - 1];
         }
 
-        void pop_back() {
+        auto pop_back() -> void {
             data_[size_ - 1].~T();
             size_--;
         }
 
-        void resize(size_t count) {
-            resize(count, T{});
+        auto resize(size_t count) -> void {
+            resize(count, value_type{});
         }
 
-        void resize(size_t count, const value_type &value) {
+        auto resize(size_t count, const value_type &value) -> void {
             if (count < size_) {
                 for (size_t i = count; i < size_; ++i) {
                     data_[i].~T();
@@ -260,24 +265,36 @@ namespace improcessing {
                     reserve(count);
                 }
                 for (size_t i = size_; i < count; ++i) {
-                    *(data_.get() + i) = T(value);
+                    *(data_.get() + i) = value_type(value);
                 }
                 size_ = count;
             }
         }
 
-        void swap(ImVector &other) noexcept (std::is_nothrow_swappable_v<std::unique_ptr<T[]> >) {
+        auto swap(ImVector &other) noexcept (std::is_nothrow_swappable_v<std::unique_ptr<value_type[]> >) -> void {
             using std::swap;
             swap(data_, other.data_);
             swap(size_, other.size_);
             swap(capacity_, other.capacity_);
         }
 
+        auto release() noexcept -> value_type * {
+            size_ = 0;
+            capacity_ = 0;
+            return data_.release();
+        }
+
+        auto reset() noexcept -> void {
+            size_ = 0;
+            capacity_ = 0;
+            data_.reset();
+        }
+
     private:
         size_t size_;
         size_t capacity_;
 
-        std::unique_ptr<T []> data_;
+        std::unique_ptr<value_type []> data_;
     };
 
     template<typename T>
