@@ -54,6 +54,11 @@ int main(int argc, char *argv[]) {
 
     parser.add_subparser(command_lab2);
 
+    argparse::ArgumentParser command_lab3("lab3");
+    command_lab3.add_description("starts Laboratory 3");
+
+    parser.add_subparser(command_lab3);
+
     try {
         parser.parse_args(argc, argv);
     } catch (const std::exception &err) {
@@ -76,6 +81,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (parser.is_subcommand_used(command_lab2)) {
             return Laboratory2{.input_filename = input_first, .output_filename = output, .n_levels = n_levels};
+        } else if (parser.is_subcommand_used(command_lab3)) {
+            return Laboratory3{};
         }
 
         return std::nullopt;
@@ -157,6 +164,88 @@ int main(int argc, char *argv[]) {
             fmt::print(
                 "Saved scatter image: {}, with n_levels: {}\n",
                 (std::filesystem::current_path() / c.output_filename).string(), c.n_levels);
+
+            return {};
+        },
+        [](const Laboratory3 &c) -> std::expected<void, boost::system::error_code> {
+            std::vector<Point2D> poly = {
+                // {11, 25}, {30, 40}, {26, 20}, {18, 16}, {12, 26}, {10, 14}
+                {0, 0}, {0, 20}, {20, 20}, {20, 0}
+                // {50, 0},
+                // {60, 35},
+                // {100, 35},
+                // {65, 55},
+                // {80, 100},
+                // {50, 70},
+                // {20, 100},
+                // {35, 55},
+                // {0, 35},
+                // {40, 35}
+            };
+
+            int width = 600, height = 300;
+
+            for (auto &p: poly) {
+                p.y += height / 2;
+                p.x += width / 2;
+            }
+
+            constexpr auto image_with_edges_name = "PolygonEdges.png";
+            constexpr auto image_with_filled_polys_name = "PolygonFilled.png";
+
+            Image img(width, height, Image::Type::kRGB);
+
+            std::vector<Point2D> right = poly;
+            std::vector<Point2D> left = poly;
+
+            for (auto &p: left) { p.x -= width / 4; }
+            for (auto &p: right) { p.x += width / 4; }
+
+            if (auto draw_left_polygon_edges = DrawPolygonEdges(img, left, {255, 230, 100}); !draw_left_polygon_edges) {
+                return std::unexpected{draw_left_polygon_edges.error()};
+            }
+
+            if (auto draw_right_polygon_edges = DrawPolygonEdges(img, right, {255, 230, 100}); !
+                draw_right_polygon_edges) {
+                return std::unexpected{draw_right_polygon_edges.error()};
+            }
+
+            auto save = SaveImage(image_with_edges_name, img, Image::Type::kRGB);
+            if (!save) {
+                return std::unexpected{save.error()};
+            }
+
+            fmt::print(
+                "Saved an image with drawn polygon edges: {}\n",
+                (std::filesystem::current_path() / image_with_edges_name).string());
+
+            FillPolygonEvenOdd(img, left, {200, 220, 255});
+            FillPolygonNonZero(img, right, {200, 220, 255});
+
+            if (auto draw_left_polygon_edges = DrawPolygonEdges(img, left, {255, 230, 100}); !draw_left_polygon_edges) {
+                return std::unexpected{draw_left_polygon_edges.error()};
+            }
+
+            if (auto draw_right_polygon_edges = DrawPolygonEdges(img, right, {255, 230, 100}); !
+                draw_right_polygon_edges) {
+                return std::unexpected{draw_right_polygon_edges.error()};
+            }
+
+            save = SaveImage(image_with_filled_polys_name, img, Image::Type::kRGB);
+            if (!save) {
+                return std::unexpected{save.error()};
+            }
+
+            fmt::print(
+                "Saved an image with filled polygons: {}\n",
+                (std::filesystem::current_path() / image_with_filled_polys_name).string());
+
+            auto simple = IsSimplePolygon(poly);
+            auto convex = IsConvexPolygon(poly);
+
+            fmt::print(
+                "Determine polygon as {} and {}\n",
+                simple ? "simple" : "complex (self-intersecting)", convex ? "convex" : "non-convex");
 
             return {};
         }

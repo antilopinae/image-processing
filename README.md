@@ -104,6 +104,17 @@ Converting an 8 bpp image to n bpp (n < 8) using the Floyd-Stenberg error scatte
 * `-n`, `--n-levels` — amount of bpp to convert
 * `-o`, `--output` — output filepath to PNG-file
 
+### Lab3 - `lab3`
+
+Building and filling polygons.
+
+Implement the following functions:
+1. Drawing straight line segments with a thickness of 1 pixel.
+2. Displaying the polygon on the screen.
+3. Definitions of the polygon type: simple or complex (i.e. with self-intersections), convex or non-convex.
+4. Filling the polygon using the even-odd and non-zero-winding rules for determining
+   whether a pixel belongs to a polygon.
+
 ---
 
 ### Help
@@ -152,8 +163,6 @@ Print lab1 blend:
 
 ![example_lab1_blend_result](./assets/ex-blend-result.png)
 
----
-
 ### Laboratory 2
 
 #### Input image
@@ -175,3 +184,13 @@ Print lab1 blend:
 #### Output with 8 bpp
 
 ![example_lab2_floyd_result](./assets/ex-floyd8.png)
+
+### Laboratory 3
+
+#### Output images
+
+![example_lab3_polygon_edges](./assets/polygon_edges.png)
+
+![example_lab3_polygon_even_odd](./assets/polygon_filled1.png)
+
+![example_lab3_polygon_non_zero](./assets/polygon_filled2.png)

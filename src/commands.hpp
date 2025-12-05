@@ -31,4 +31,7 @@ struct Laboratory2 {
     const uint8_t n_levels;
 };
 
-using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2>;
+struct Laboratory3 {
+};
+
+using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3>;

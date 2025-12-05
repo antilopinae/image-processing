@@ -52,7 +52,8 @@ namespace improcessing {
         return std::move(image);
     }
 
-    auto SaveImage(const std::string &filename, const Image &image) -> std::expected<void, boost::system::error_code> {
+    auto SaveImage(const std::string &filename, const Image &image,
+                   Image::Type type) -> std::expected<void, boost::system::error_code> {
         std::unique_ptr<FILE, details::FileCloser> file(std::fopen(filename.c_str(), "wb"));
         if (!file) {
             return std::unexpected{boost::system::errc::make_error_code(boost::system::errc::io_error)};
@@ -62,22 +63,47 @@ namespace improcessing {
 
         png_init_io(png.png_ptr, file.get());
 
-        png_set_IHDR(
-            png.png_ptr,
-            png.info_ptr,
-            image.WidthGray(),
-            image.HeightGray(),
-            8,
-            PNG_COLOR_TYPE_GRAY,
-            PNG_INTERLACE_NONE,
-            PNG_COMPRESSION_TYPE_DEFAULT,
-            PNG_FILTER_TYPE_DEFAULT);
+        switch (type) {
+            case Image::Type::kGray: {
+                png_set_IHDR(
+                    png.png_ptr,
+                    png.info_ptr,
+                    image.WidthGray(),
+                    image.HeightGray(),
+                    8,
+                    PNG_COLOR_TYPE_GRAY,
+                    PNG_INTERLACE_NONE,
+                    PNG_COMPRESSION_TYPE_DEFAULT,
+                    PNG_FILTER_TYPE_DEFAULT);
 
-        png_write_info(png.png_ptr, png.info_ptr);
+                png_write_info(png.png_ptr, png.info_ptr);
 
-        auto row_ptrs = image.GetGrayPtrs();
+                auto row_ptrs = image.GetGrayPtrs();
 
-        png_write_image(png.png_ptr, row_ptrs.data());
+                png_write_image(png.png_ptr, row_ptrs.data());
+            }
+            break;
+            case Image::Type::kRGB: {
+                png_set_IHDR(
+                    png.png_ptr,
+                    png.info_ptr,
+                    image.WidthRgb(),
+                    image.HeightRgb(),
+                    8,
+                    PNG_COLOR_TYPE_RGB,
+                    PNG_INTERLACE_NONE,
+                    PNG_COMPRESSION_TYPE_DEFAULT,
+                    PNG_FILTER_TYPE_DEFAULT);
+
+                png_write_info(png.png_ptr, png.info_ptr);
+
+                auto row_ptrs = image.GetGrayPtrs();
+
+                png_write_image(png.png_ptr, row_ptrs.data());
+            }
+            break;
+        }
+
         png_write_end(png.png_ptr, png.info_ptr);
 
         return {};
@@ -195,5 +221,292 @@ namespace improcessing {
         }
 
         return {};
+    }
+
+    auto DrawLine(Image &img, Point2D start, Point2D end,
+                  Pixel color) -> std::expected<void, boost::system::error_code> {
+        int x = start.x, y = start.y;
+        int dx = end.x - start.x, dy = end.y - start.y;
+        int ix, iy, e, i;
+        if (dx > 0) {
+            ix = 1;
+        } else if (dx < 0) {
+            ix = -1;
+            dx = -dx;
+        } else {
+            ix = 0;
+        }
+
+        if (dy > 0) {
+            iy = 1;
+        } else if (dy < 0) {
+            iy = -1;
+            dy = -dy;
+        } else {
+            iy = 0;
+        }
+
+        if (dx >= dy) {
+            e = 2 * dy - dx;
+            if (iy >= 0) {
+                for (i = 0; i <= dx; i++) {
+                    img.GetRGBPixel(x, y) = color;
+                    if (e >= 0) {
+                        y += iy;
+                        e -= 2 * dx;
+                    }
+                    x += ix;
+                    e += dy * 2;
+                }
+            } else {
+                for (i = 0; i <= dx; i++) {
+                    img.GetRGBPixel(x, y) = color;
+                    if (e > 0) {
+                        y += iy;
+                        e -= 2 * dx;
+                    }
+                    x += ix;
+                    e += dy * 2;
+                }
+            }
+        } else {
+            e = 2 * dx - dy;
+            if (ix >= 0) {
+                for (i = 0; i <= dy; i++) {
+                    img.GetRGBPixel(x, y) = color;
+                    if (e >= 0) {
+                        x += ix;
+                        e -= 2 * dy;
+                    }
+                    y += iy;
+                    e += dx * 2;
+                }
+            } else {
+                for (i = 0; i <= dy; i++) {
+                    img.GetRGBPixel(x, y) = color;
+                    if (e > 0) {
+                        x += ix;
+                        e -= 2 * dy;
+                    }
+                    y += iy;
+                    e += dx * 2;
+                }
+            }
+        }
+
+        return {};
+    }
+
+    auto DrawPolygonEdges(Image &img, const std::vector<Point2D> &poly,
+                          Pixel color) -> std::expected<void, boost::system::error_code> {
+        auto size = poly.size();
+
+        for (auto i = 0u; i < size; ++i) {
+            if (i == size - 1) {
+                if (auto res = DrawLine(img, poly[i], poly[0], color); !res) {
+                    return std::unexpected{res.error()};
+                }
+                break;
+            }
+
+            if (auto res = DrawLine(img, poly[i], poly[i + 1], color); !res) {
+                return std::unexpected{res.error()};
+            }
+        }
+
+        return {};
+    }
+
+    __always_inline static auto orient(const Point2D &a, const Point2D &b, const Point2D &c) -> int64_t {
+        int64_t abx = b.x - a.x;
+        int64_t aby = b.y - a.y;
+        int64_t acx = c.x - a.x;
+        int64_t acy = c.y - a.y;
+        return abx * acy - aby * acx;
+    }
+
+    __always_inline static auto sign64(int64_t v) -> int {
+        return (v > 0) - (v < 0);
+    }
+
+    __always_inline static auto onSegment(const Point2D &a, const Point2D &b, const Point2D &p) -> bool {
+        if (__builtin_expect(orient(a, b, p) != 0, 1)) return false;
+
+        return (p.x >= (a.x < b.x ? a.x : b.x) &&
+                p.x <= (a.x > b.x ? a.x : b.x) &&
+                p.y >= (a.y < b.y ? a.y : b.y) &&
+                p.y <= (a.y > b.y ? a.y : b.y));
+    }
+
+    __always_inline static auto segmentsIntersect(
+        const Point2D &p1, const Point2D &p2,
+        const Point2D &q1, const Point2D &q2) -> bool {
+        // AABB
+        if (std::max(p1.x, p2.x) < std::min(q1.x, q2.x)) return false;
+        if (std::max(q1.x, q2.x) < std::min(p1.x, p2.x)) return false;
+        if (std::max(p1.y, p2.y) < std::min(q1.y, q2.y)) return false;
+        if (std::max(q1.y, q2.y) < std::min(p1.y, p2.y)) return false;
+
+        int64_t o1 = orient(p1, p2, q1);
+        int64_t o2 = orient(p1, p2, q2);
+        if (__builtin_expect((int64_t) o1 * o2 < 0, 0)) {
+            int64_t o3 = orient(q1, q2, p1);
+            int64_t o4 = orient(q1, q2, p2);
+            return (o3 * o4 < 0);
+        }
+
+        if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+        if (o2 == 0 && onSegment(p1, p2, q2)) return true;
+
+        int64_t o3 = orient(q1, q2, p1);
+        int64_t o4 = orient(q1, q2, p2);
+        if (o3 == 0 && onSegment(q1, q2, p1)) return true;
+        if (o4 == 0 && onSegment(q1, q2, p2)) return true;
+
+        return false;
+    }
+
+    auto IsSimplePolygon(const std::vector<Point2D> &v) -> bool {
+        auto n = v.size();
+        if (n < 4) return true;
+
+        for (auto i = 0ul; i < n; i++) {
+            auto i2 = (i + 1 < n ? i + 1 : 0ul);
+            for (auto j = i + 1; j < n; j++) {
+                auto j2 = (j + 1 < n ? j + 1 : 0ul);
+
+                if (i == j) continue;
+                if (i2 == j) continue;
+                if (j2 == i) continue;
+
+                if (segmentsIntersect(v[i], v[i2], v[j], v[j2]))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    auto IsConvexPolygon(const std::vector<Point2D> &v) -> bool {
+        auto n = v.size();
+        if (n < 4) return true;
+
+        int s0 = 0;
+
+        for (auto i = 0ul; i < n; i++) {
+            auto i1 = (i + 1 < n ? i + 1 : 0ul);
+            auto i2 = (i1 + 1 < n ? i1 + 1 : 0ul);
+
+            int64_t cr = orient(v[i], v[i1], v[i2]);
+            if (cr == 0) continue;
+
+            int s = (cr > 0 ? 1 : -1);
+
+            if (s0 == 0) s0 = s;
+            else if (s0 != s) return false;
+        }
+        return true;
+    }
+
+    __always_inline static auto pointOnEdge(const Point2D &p,
+                                            const std::vector<Point2D> &v) -> bool {
+        const auto n = v.size();
+        for (auto i = 0ul; i < n; i++) {
+            auto j = (i == n - 1 ? 0ul : i + 1);
+
+            if (onSegment(v[i], v[j], p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    __always_inline static auto pointInPolygonNonZero(const Point2D &P, const std::vector<Point2D> &poly) {
+        if (pointOnEdge(P, poly)) return true;
+
+        int winding = 0;
+        int n = (int) poly.size();
+        for (int i = 0; i < n; ++i) {
+            const Point2D &a = poly[i];
+            const Point2D &b = poly[(i + 1 == n) ? 0 : i + 1];
+
+            if (a.y == b.y) continue;
+
+            if (a.y <= P.y && b.y > P.y) {
+                if (orient(a, b, P) > 0)
+                    ++winding;
+            } else if (a.y > P.y && b.y <= P.y) {
+                if (orient(a, b, P) < 0)
+                    --winding;
+            }
+        }
+        return winding != 0;
+    }
+
+    auto FillPolygonNonZero(Image &img,
+                            const std::vector<Point2D> &poly,
+                            Pixel color) -> void {
+        auto minx = poly[0].x, maxx = poly[0].x;
+        auto miny = poly[0].y, maxy = poly[0].y;
+
+        for (auto &p: poly) {
+            minx = std::min(minx, p.x);
+            maxx = std::max(maxx, p.x);
+            miny = std::min(miny, p.y);
+            maxy = std::max(maxy, p.y);
+        }
+
+        for (auto y = miny; y <= maxy; y++)
+            for (auto x = minx; x <= maxx; x++)
+                if (pointInPolygonNonZero({x, y}, poly))
+                    img.GetRGBPixel(x, y) = color;
+    }
+
+    __always_inline static auto findIntersectionsY_EO(const std::vector<Point2D> &vertices,
+                                                      size_t y) -> std::vector<int> {
+        using namespace std;
+
+        vector<int> xInts;
+        size_t n = vertices.size();
+
+        for (size_t i = 0; i < n; ++i) {
+            auto p1 = vertices[i];
+            auto p2 = vertices[(i + 1) % n];
+
+            if (p1.y == p2.y) continue;
+
+            if (y >= min(p1.y, p2.y) && y < max(p1.y, p2.y)) {
+                int dy = p2.y - p1.y;
+                int dx = p2.x - p1.x;
+                int x = p1.x + (y - p1.y) * dx / dy;
+                xInts.push_back(x);
+            }
+        }
+
+        sort(xInts.begin(), xInts.end());
+        return xInts;
+    }
+
+    auto FillPolygonEvenOdd(Image &img, const std::vector<Point2D> &vertices, Pixel color) -> void {
+        if (vertices.size() < 3) return;
+
+        using namespace std;
+
+        int minY = (int) img.HeightRgb(), maxY = 0;
+        for (const auto &p: vertices) {
+            minY = min(minY, (int) p.y);
+            maxY = max(maxY, (int) p.y);
+        }
+
+        for (int y = max(minY, 0); y < min(maxY, (int) img.HeightRgb()); ++y) {
+            vector<int> xInts = findIntersectionsY_EO(vertices, y);
+
+            for (size_t i = 0; i + 1 < xInts.size(); i += 2) {
+                int xStart = max(xInts[i], 0);
+                int xEnd = min(xInts[i + 1], (int) img.WidthRgb() - 1);
+                for (int x = xStart; x <= xEnd; ++x) {
+                    img.GetRGBPixel(x, y) = color;
+                }
+            }
+        }
     }
 } // namespace improcessing

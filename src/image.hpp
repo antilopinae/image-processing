@@ -157,6 +157,14 @@ namespace improcessing {
             return vec;
         }
 
+        auto GetRGBPixel(size_t x, size_t y) -> rgb_type & {
+            return *reinterpret_cast<rgb_type *>(&image_(x * kAmountRgb, y));
+        }
+
+        auto GetRGBPixel(size_t x, size_t y) const -> const rgb_type & {
+            return *reinterpret_cast<const rgb_type *>(&image_(x * kAmountRgb, y));
+        }
+
         auto operator()(size_t x, size_t y) -> gray_type & {
             return image_(x, y);
         }
@@ -258,5 +266,6 @@ namespace improcessing {
         ImageGray image_;
     };
 
+    using Pixel = PixelRGB<uint8_t>;
     using Image = ImageRGB<uint8_t>;
 } // namespace improcessing
