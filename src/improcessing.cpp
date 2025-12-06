@@ -325,10 +325,6 @@ namespace improcessing {
         return abx * acy - aby * acx;
     }
 
-    __always_inline static auto sign64(int64_t v) -> int {
-        return (v > 0) - (v < 0);
-    }
-
     __always_inline static auto onSegment(const Point2D &a, const Point2D &b, const Point2D &p) -> bool {
         if (__builtin_expect(orient(a, b, p) != 0, 1)) return false;
 
@@ -508,5 +504,96 @@ namespace improcessing {
                 }
             }
         }
+    }
+
+    auto CyrusBeckClipSegmentCW(Point &p0, Point &p1, const std::vector<Point> &polyCW) -> bool {
+        auto n = polyCW.size();
+        if (n < 3) return false;
+
+        auto t_enter = 0.0;
+        auto t_leave = 1.0;
+
+        auto sx = p1.x - p0.x;
+        auto sy = p1.y - p0.y;
+
+        for (size_t i = 0; i < n; ++i) {
+            const auto &vi = polyCW[i];
+            const auto &vi1 = polyCW[(i + 1) % n];
+
+            auto nx = vi1.y - vi.y;
+            auto ny = vi.x - vi1.x;
+
+            auto denom = nx * sx + ny * sy;
+            auto num = nx * (p0.x - vi.x) + ny * (p0.y - vi.y);
+
+            if (fabs(denom) > Point::EPS) {
+                auto t = -num / denom;
+                if (denom > 0.0) {
+                    if (t > t_enter) {
+                        t_enter = t;
+                    }
+                } else {
+                    if (t < t_leave) {
+                        t_leave = t;
+                    }
+                }
+                if (t_enter - t_leave > Point::EPS) {
+                    return false;
+                }
+            } else {
+                int cls = ClassifyPointToEdge(vi, vi1, p0);
+                if (cls > 0) {
+                    // LEFT
+                    return false;
+                }
+            }
+        }
+
+        auto t0 = std::max(0.0, t_enter);
+        auto t1 = std::min(1.0, t_leave);
+        if (t0 > t1 + Point::EPS) {
+            return false;
+        }
+
+        auto d = p1 - p0;
+        auto c0 = p0 + d * t0;
+        auto c1 = p0 + d * t1;
+
+        // Update points
+        p0 = c0;
+        p1 = c1;
+
+        return true;
+    }
+
+    auto BezierLine(const Point &p0, const Point &p1, double t) -> Point {
+        return p0 * (1.0 - t) + p1 * t;
+    }
+
+    auto BezierQuadratic(const Point &p0, const Point &p1, const Point &p2, double t) -> Point {
+        return BezierLine(
+            BezierLine(p0, p1, t),
+            BezierLine(p1, p2, t),
+            t
+        );
+    }
+
+    auto BezierCubic(const Point &p0, const Point &p1, const Point &p2, const Point &p3, double t) -> Point {
+        return BezierLine(
+            BezierQuadratic(p0, p1, p2, t),
+            BezierQuadratic(p1, p2, p3, t),
+            t
+        );
+    }
+
+    auto BezierCubicCurve(Point p0, Point p1, Point p2, Point p3, int steps) -> std::vector<Point> {
+        std::vector<Point> curve;
+        curve.reserve(steps + 1);
+
+        for (int i = 0; i <= steps; i++) {
+            double t = double(i) / steps;
+            curve.push_back(BezierCubic(p0, p1, p2, p3, t));
+        }
+        return curve;
     }
 } // namespace improcessing

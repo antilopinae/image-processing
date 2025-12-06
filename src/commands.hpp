@@ -34,4 +34,7 @@ struct Laboratory2 {
 struct Laboratory3 {
 };
 
-using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3>;
+struct Laboratory4 {
+};
+
+using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3, Laboratory4>;

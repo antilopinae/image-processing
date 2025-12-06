@@ -103,4 +103,22 @@ namespace improcessing {
     */
     auto FillPolygonNonZero(Image &img, const std::vector<Point2D> &poly,
                             Pixel color) -> void;
+
+    /*!
+    * @brief The Cyrus-Beck algorithm for a CW-oriented polygon
+    * @param p0 coordinates of the beginning of segment line
+    * @param p1 coordinates of the end of segment line
+    * @param polyCW Coordinates of the vertexes of polygon Clock-Wise that clips line
+    * @note param p0 and p1 will be changed to borders of clipped segment
+    * @return true if at least part of the segment remains in the polygon, false — if completely outside
+    */
+    auto CyrusBeckClipSegmentCW(Point &p0, Point &p1, const std::vector<Point> &polyCW) -> bool;
+
+    /*!
+    * @brief The Bezier algorithm for drawing curve
+    * @param p0, p1, p2, p3 Points to make bezier cubic curve
+    * @param steps Gap between the generated points and amount of return vector
+    * @return vector of steps+1 points of the constructed curve
+    */
+    auto BezierCubicCurve(Point p0, Point p1, Point p2, Point p3, int steps) -> std::vector<Point>;
 } // namespace improcessing

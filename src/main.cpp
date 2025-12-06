@@ -1,3 +1,4 @@
+#include <cassert>
 #include <commands.hpp>
 #include <expected>
 #include <filesystem>
@@ -59,6 +60,11 @@ int main(int argc, char *argv[]) {
 
     parser.add_subparser(command_lab3);
 
+    argparse::ArgumentParser command_lab4("lab4");
+    command_lab4.add_description("starts Laboratory 4");
+
+    parser.add_subparser(command_lab4);
+
     try {
         parser.parse_args(argc, argv);
     } catch (const std::exception &err) {
@@ -83,6 +89,8 @@ int main(int argc, char *argv[]) {
             return Laboratory2{.input_filename = input_first, .output_filename = output, .n_levels = n_levels};
         } else if (parser.is_subcommand_used(command_lab3)) {
             return Laboratory3{};
+        } else if (parser.is_subcommand_used(command_lab4)) {
+            return Laboratory4{};
         }
 
         return std::nullopt;
@@ -248,7 +256,183 @@ int main(int argc, char *argv[]) {
                 simple ? "simple" : "complex (self-intersecting)", convex ? "convex" : "non-convex");
 
             return {};
-        }
+        },
+        [](const Laboratory4 &c) -> std::expected<void, boost::system::error_code> {
+            std::vector<Point> squareCW = {{0, 0}, {0, 10}, {10, 10}, {10, 0}};
+
+            auto do_smth_with_image = [](const std::string &im_name, const std::function<void(Image &)> &payload,
+                                         int width = 600,
+                                         int height = 300) -> std::expected<void, boost::system::error_code> {
+                Image img(width, height, Image::Type::kRGB);
+                payload(img);
+
+                auto save = SaveImage(im_name, img, Image::Type::kRGB);
+                if (!save) {
+                    return std::unexpected{save.error()};
+                }
+
+                fmt::print("Saved an image: {}\n", (std::filesystem::current_path() / im_name).string());
+
+                return {};
+            };
+
+            auto res = do_smth_with_image("segment_cross_square.png", [](Image &img) -> void {
+                std::vector<Point> squareCW = {{5, 0}, {5, 10}, {15, 10}, {15, 0}};
+                Point A(0, 5), B(20, 5);
+
+                Point a = A, b = B;
+                bool inside = CyrusBeckClipSegmentCW(a, b, squareCW);
+
+                assert(inside && "The segment not cross square!");
+
+                std::ignore = DrawLine(img, A.ToPoint2D(), B.ToPoint2D(), {200, 220, 255});
+                std::ignore = DrawLine(img, a.ToPoint2D(), b.ToPoint2D(), {100, 30, 150});
+
+                std::vector<Point2D> square2d;
+                square2d.reserve(squareCW.size());
+
+                std::ranges::transform(squareCW.begin(), squareCW.end(), std::back_inserter(square2d), [](auto &p) {
+                    return p.ToPoint2D();
+                });
+
+                std::ignore = DrawPolygonEdges(img, square2d, {255, 230, 100});
+            }, 30, 15);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = do_smth_with_image("segment_inside_square.png", [](Image &img) -> void {
+                std::vector<Point> squareCW = {{5, 0}, {5, 10}, {15, 10}, {15, 0}};
+                Point A(5, 5), B(10, 10);
+
+                Point a = A, b = B;
+                bool inside = CyrusBeckClipSegmentCW(a, b, squareCW);
+
+                assert(inside && "The segment not cross square!");
+
+                std::ignore = DrawLine(img, A.ToPoint2D(), B.ToPoint2D(), {200, 220, 255});
+                std::ignore = DrawLine(img, a.ToPoint2D(), b.ToPoint2D(), {100, 30, 150});
+
+                std::vector<Point2D> square2d;
+                square2d.reserve(squareCW.size());
+
+                std::ranges::transform(squareCW.begin(), squareCW.end(), std::back_inserter(square2d), [](auto &p) {
+                    return p.ToPoint2D();
+                });
+
+                std::ignore = DrawPolygonEdges(img, square2d, {255, 230, 100});
+            }, 30, 15);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = do_smth_with_image("segment_outside_square.png", [](Image &img) -> void {
+                std::vector<Point> squareCW = {{5, 5}, {5, 15}, {15, 15}, {15, 5}};
+                Point A(0, 0), B(4, 4);
+
+                Point a = A, b = B;
+                bool inside = CyrusBeckClipSegmentCW(a, b, squareCW);
+
+                assert(!inside && "The segment cross square!");
+
+                std::ignore = DrawLine(img, A.ToPoint2D(), B.ToPoint2D(), {200, 220, 255});
+
+                std::vector<Point2D> square2d;
+                square2d.reserve(squareCW.size());
+
+                std::ranges::transform(squareCW.begin(), squareCW.end(), std::back_inserter(square2d), [](auto &p) {
+                    return p.ToPoint2D();
+                });
+
+                std::ignore = DrawPolygonEdges(img, square2d, {255, 230, 100});
+            }, 30, 20);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = do_smth_with_image("bezier_symmetric.png", [](Image &img) -> void {
+                Point p0(10, 10);
+                Point p1(20, 40);
+                Point p2(40, 40);
+                Point p3(50, 10);
+
+                auto curve = BezierCubicCurve(p0, p1, p2, p3, 60);
+
+                assert(curve.front().Equal(p0));
+                assert(curve.back().Equal(p3));
+
+                for (int i = 0; i <= 30; i++) {
+                    auto &c1 = curve[i];
+                    auto &c2 = curve[60 - i];
+
+                    assert(fabs((c1.x + c2.x)/2 - 30.0) < 0.5);
+                }
+
+                for (auto &c: curve) {
+                    const auto &p = c.ToPoint2D();
+                    img.GetRGBPixel(p.x, p.y) = {200, 255, 200};
+                }
+            }, 60, 50);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = do_smth_with_image("bezier_linearity.png", [](Image &img) -> void {
+                Point p0(0, 0), p1(5, 5), p2(10, 10), p3(15, 15);
+
+                auto curve = BezierCubicCurve(p0, p1, p2, p3, 20);
+
+                for (size_t i = 0; i < curve.size(); i++) {
+                    double t = double(i) / 20.0;
+
+                    Point expected = p0 * (1 - t) + p3 * t;
+                    assert(curve[i].Equal(expected, 1e-6));
+                }
+
+                for (auto &c: curve) {
+                    const auto &p = c.ToPoint2D();
+                    img.GetRGBPixel(p.x, p.y) = {200, 255, 200};
+                }
+            }, 20, 20);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = do_smth_with_image("bezier_basic.png", [](Image &img) -> void {
+                Point p0(2, 2);
+                Point p1(5, 15);
+                Point p2(15, 15);
+                Point p3(18, 2);
+
+                int steps = 40;
+                auto curve = BezierCubicCurve(p0, p1, p2, p3, steps);
+
+                assert(curve.size() == steps + 1);
+
+                assert(curve.front().Equal(p0));
+                assert(curve.back().Equal(p3));
+
+                std::ignore = DrawLine(img, p0.ToPoint2D(), p1.ToPoint2D(), {255, 200, 100});
+                std::ignore = DrawLine(img, p1.ToPoint2D(), p2.ToPoint2D(), {255, 200, 100});
+                std::ignore = DrawLine(img, p2.ToPoint2D(), p3.ToPoint2D(), {255, 200, 100});
+
+                for (auto &c: curve) {
+                    const auto &p = c.ToPoint2D();
+                    img.GetRGBPixel(p.x, p.y) = {200, 255, 200};
+                }
+            }, 20, 20);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            return {};
+        },
     };
 
     try {

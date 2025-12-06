@@ -109,11 +109,22 @@ Converting an 8 bpp image to n bpp (n < 8) using the Floyd-Stenberg error scatte
 Building and filling polygons.
 
 Implement the following functions:
+
 1. Drawing straight line segments with a thickness of 1 pixel.
 2. Displaying the polygon on the screen.
 3. Definitions of the polygon type: simple or complex (i.e. with self-intersections), convex or non-convex.
 4. Filling the polygon using the even-odd and non-zero-winding rules for determining
    whether a pixel belongs to a polygon.
+
+### Lab4 - `lab4`
+
+Draw Bezier curves, clipping straight line segments with a convex polygon.
+
+Implement the following functions:
+
+1. Construction of Bezier curves of the third order.
+2. Clipping straight line segments with a convex polygon using the algorithm
+   Kirusa-Beka.
 
 ---
 
@@ -194,3 +205,23 @@ Print lab1 blend:
 ![example_lab3_polygon_even_odd](./assets/polygon_filled1.png)
 
 ![example_lab3_polygon_non_zero](./assets/polygon_filled2.png)
+
+### Laboratory 4
+
+#### Output images
+
+#### Cross-segments
+
+![example_lab4_](./assets/segment_cross_square.png)
+
+![example_lab4_](./assets/segment_inside_square.png)
+
+![example_lab4_](./assets/segment_outside_square.png)
+
+#### Bezier curves
+
+![example_lab4_](./assets/bezier_basic.png)
+
+![example_lab4_](./assets/bezier_linearity.png)
+
+![example_lab4_](./assets/bezier_symmetric.png)
