@@ -149,4 +149,31 @@ namespace improcessing {
     auto RenderParallelepiped(Image &img, Point3 center, Point3 size,
                               Point3 rotationAxis, double angle,
                               ProjectionType type, double k) -> void;
+
+    /*!
+     * @brief Extracts the external contour of a self-intersecting polygon
+     *      Uses rasterization (NZW) and Moore-Neighbor tracing
+     * @param poly Original polygon
+     * @param width Canvas width for processing
+     * @param height Canvas height for processing
+     * @return A vector of points representing the external contour
+     */
+    auto ExtractExteriorContour(const std::vector<Point2D> &poly, size_t width, size_t height) -> std::vector<Point2D>;
+
+    /*!
+     * @brief Approximation of a circle arc using Cubic Bezier curves
+     * @param center Center of the circle
+     * @param radius Radius
+     * @param angle_start_deg Start angle in degrees
+     * @param angle_end_deg End angle in degrees
+     * @return Vector of points forming the arc
+     */
+    auto MakeCircleArc(Point center, double radius, double angle_start_deg, double angle_end_deg) -> std::vector<Point>;
+
+    /*!
+     * @brief Color quantization using K-Means clustering
+     * @param img Image to process
+     * @param k Number of colors
+     */
+    auto ColorQuantizationKMeans(Image &img, int k) -> std::expected<void, boost::system::error_code>;
 } // namespace improcessing

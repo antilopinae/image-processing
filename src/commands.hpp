@@ -44,4 +44,21 @@ struct Laboratory5 {
     const int frames;
 };
 
-using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3, Laboratory4, Laboratory5>;
+struct Homework1 {
+    const std::string &output_filename;
+};
+
+struct Homework2 {
+    const std::string &output_filename;
+    double center_x, center_y, radius;
+    double angle_start, angle_end;
+};
+
+struct Homework3 {
+    const std::string &input_filename;
+    const std::string &output_filename;
+    int k_colors;
+};
+
+using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3, Laboratory4, Laboratory5
+    , Homework1, Homework2, Homework3>;

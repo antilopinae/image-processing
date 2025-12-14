@@ -104,6 +104,46 @@ int main(int argc, char *argv[]) {
 
     parser.add_subparser(command_lab5);
 
+    argparse::ArgumentParser command_hw1("hw1");
+    command_hw1.add_description("Extract external contour of self-intersecting polygon");
+
+    AddOutputArgument(command_hw1, output);
+
+    parser.add_subparser(command_hw1);
+
+    argparse::ArgumentParser command_hw2("hw2");
+    command_hw2.add_description("Draw circular arc using Bezier curves");
+
+    double arc_cx = 300, arc_cy = 300, arc_r = 200;
+    double arc_start = 0, arc_end = 270;
+
+    AddOutputArgument(command_hw2, output);
+
+    command_hw2.add_argument("--center").nargs(2).scan<'g', double>().default_value(std::vector<double>{300, 300}).
+            help("Center X Y");
+
+    command_hw2.add_argument("-r", "--radius").scan<'g', double>().store_into(arc_r).default_value(200.0);
+
+    command_hw2.add_argument("-s", "--start").scan<'g', double>().store_into(arc_start).default_value(0.0).help(
+        "Start angle (deg)");
+
+    command_hw2.add_argument("-e", "--end").scan<'g', double>().store_into(arc_end).default_value(270.0).help(
+        "End angle (deg)");
+
+    parser.add_subparser(command_hw2);
+
+    argparse::ArgumentParser command_hw3("hw3");
+    command_hw3.add_description("K-Means Color Quantization");
+
+    int k_colors = 8;
+
+    AddInputArgument(command_hw3, input_first);
+    AddOutputArgument(command_hw3, output);
+
+    command_hw3.add_argument("-k").scan<'i', int>().store_into(k_colors).default_value(8).help("Number of colors");
+
+    parser.add_subparser(command_hw3);
+
     try {
         parser.parse_args(argc, argv);
     } catch (const std::exception &err) {
@@ -139,6 +179,18 @@ int main(int argc, char *argv[]) {
                 .axis_x = axis[0], .axis_y = axis[1], .axis_z = axis[2],
                 .frames = frames
             };
+        } else if (parser.is_subcommand_used(command_hw1)) {
+            return Homework1{.output_filename = output};
+        } else if (parser.is_subcommand_used(command_hw2)) {
+            auto c = command_hw2.get<std::vector<double> >("--center");
+
+            return Homework2{
+                .output_filename = output,
+                .center_x = c[0], .center_y = c[1], .radius = arc_r,
+                .angle_start = arc_start, .angle_end = arc_end
+            };
+        } else if (parser.is_subcommand_used(command_hw3)) {
+            return Homework3{.input_filename = input_first, .output_filename = output, .k_colors = k_colors};
         }
 
         return std::nullopt;
@@ -580,6 +632,56 @@ int main(int argc, char *argv[]) {
                 }
             }
 
+            return {};
+        },
+        [](const Homework1 &c) -> std::expected<void, boost::system::error_code> {
+            std::vector<Point2D> poly = {
+                {100, 100}, {400, 100}, {100, 400}, {400, 400}
+            };
+
+            DoSmthWithImage(c.output_filename + "_original.png", [&](Image &img) {
+                DrawPolygonEdges(img, poly, {100, 100, 100}); // Серый контур
+            }, 500, 500);
+
+            auto contour = ExtractExteriorContour(poly, 500, 500);
+
+            DoSmthWithImage(c.output_filename, [&](Image &img) {
+                FillPolygonNonZero(img, poly, {50, 50, 150});
+                DrawPolygonEdges(img, contour, {255, 255, 0});
+            }, 500, 500);
+
+            fmt::print("Extracted contour size: {} points\n", contour.size());
+            return {};
+        },
+
+        [](const Homework2 &c) -> std::expected<void, boost::system::error_code> {
+            Point center(c.center_x, c.center_y);
+            auto arc_points = MakeCircleArc(center, c.radius, c.angle_start, c.angle_end);
+
+            DoSmthWithImage(c.output_filename, [&](Image &img) {
+                for (const auto &p: arc_points) {
+                    auto p2d = p.ToPoint2D();
+                    img.GetRGBPixel(p2d.x, p2d.y) = {0, 255, 0};
+                }
+
+                DrawLine(img, center.ToPoint2D(), arc_points.front().ToPoint2D(), {100, 100, 100});
+                DrawLine(img, center.ToPoint2D(), arc_points.back().ToPoint2D(), {100, 100, 100});
+            }, 600, 600);
+
+            return {};
+        },
+
+        [](const Homework3 &c) -> std::expected<void, boost::system::error_code> {
+            auto image_res = ReadImage(c.input_filename);
+            if (!image_res) return std::unexpected{image_res.error()};
+
+            fmt::print("Starting K-Means quantization (k={})...\n", c.k_colors);
+            ColorQuantizationKMeans(image_res.value(), c.k_colors);
+
+            auto save = SaveImage(c.output_filename, image_res.value());
+            if (!save) return std::unexpected{save.error()};
+
+            fmt::print("Saved quantized image: {}\n", c.output_filename);
             return {};
         }
     };

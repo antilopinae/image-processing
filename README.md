@@ -317,3 +317,31 @@ Print lab1 blend:
 ![example_lab5_parallepiped](./assets/animation/lab5_perspective_033.png)
 ![example_lab5_parallepiped](./assets/animation/lab5_perspective_034.png)
 ![example_lab5_parallepiped](./assets/animation/lab5_perspective_035.png)
+
+### Homework 1
+
+#### Output images
+
+Original image
+
+![example_hw1_original](./assets/hw1_original.png)
+
+Result
+
+![example_hw1](./assets/hw1.png)
+
+### Homework 2
+
+#### Output images
+
+![example_hw2](./assets/hw2.png)
+
+### Homework 3
+
+#### Input images
+
+![example_hw3_input](./assets/ex-floyd.png)
+
+#### Output images
+
+![example_hw3](./assets/hw3.png)

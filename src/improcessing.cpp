@@ -4,6 +4,7 @@
 #include <image.hpp>
 #include <improcessing.hpp>
 #include <png_guard.hpp>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -702,5 +703,207 @@ namespace improcessing {
                 DrawPolygonEdges(img, poly2d, {200, 255, 200});
             }
         }
+    }
+
+    auto ExtractExteriorContour(const std::vector<Point2D> &poly, size_t width, size_t height) -> std::vector<Point2D> {
+        Image maskRGB(width, height, Image::Type::kRGB);
+
+        Pixel black{0, 0, 0};
+        for (size_t y = 0; y < height; ++y) {
+            for (size_t x = 0; x < width; ++x) {
+                maskRGB.GetRGBPixel(x, y) = black;
+            }
+        }
+
+        FillPolygonNonZero(maskRGB, poly, {255, 255, 255});
+
+        auto start_x = -1, start_y = -1;
+        auto found = false;
+
+        for (size_t y = 0; y < height; ++y) {
+            for (size_t x = 0; x < width; ++x) {
+                if (maskRGB.GetRGBPixel(x, y).r == 255) {
+                    start_x = static_cast<int>(x);
+                    start_y = static_cast<int>(y);
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
+
+        if (!found) return {};
+
+        std::vector<Point2D> contour;
+        contour.push_back({(size_t) start_x, (size_t) start_y});
+
+        int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
+        int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+
+        auto cx = start_x;
+        auto cy = start_y;
+        auto backtrack = 6;
+
+        auto max_iters = static_cast<int>(width * height * 4);
+        auto iter = 0;
+
+        while (iter++ < max_iters) {
+            auto found_neighbor = -1;
+
+            for (auto i = 0; i < 8; ++i) {
+                auto idx = (backtrack + 1 + i) % 8;
+                auto nx = cx + dx[idx];
+                auto ny = cy + dy[idx];
+
+                if (nx >= 0 && nx < static_cast<int>(width) && ny >= 0 && ny < static_cast<int>(height)) {
+                    if (maskRGB.GetRGBPixel(nx, ny).r == 255) {
+                        found_neighbor = idx;
+                        cx = nx;
+                        cy = ny;
+                        break;
+                    }
+                }
+            }
+
+            if (found_neighbor == -1) break;
+            if (cx == start_x && cy == start_y) break;
+
+            contour.push_back({(size_t) cx, (size_t) cy});
+            backtrack = (found_neighbor + 4) % 8;
+        }
+
+        return contour;
+    }
+
+    static std::vector<Point> CreateSingleBezierArc(Point center, double radius, double start_rad, double end_rad) {
+        auto theta = end_rad - start_rad;
+        auto k = 4.0 / 3.0 * std::tan(theta / 4.0);
+
+        auto p0 = center + Point(std::cos(start_rad), std::sin(start_rad)) * radius;
+        auto p3 = center + Point(std::cos(end_rad), std::sin(end_rad)) * radius;
+
+        Point t0(-std::sin(start_rad), std::cos(start_rad));
+        Point t3(-std::sin(end_rad), std::cos(end_rad));
+
+        auto p1 = p0 + t0 * (k * radius);
+        auto p2 = p3 - t3 * (k * radius);
+
+        return BezierCubicCurve(p0, p1, p2, p3);
+    }
+
+    auto MakeCircleArc(Point center, double radius, double angle_start_deg,
+                       double angle_end_deg) -> std::vector<Point> {
+        std::vector<Point> result;
+
+        auto to_rad = M_PI / 180.0;
+        auto start = angle_start_deg * to_rad;
+        auto end = angle_end_deg * to_rad;
+
+        if (end < start) end += 2.0 * M_PI;
+
+        auto total_sweep = end - start;
+        const auto max_step = M_PI / 2.0;
+
+        auto segments = static_cast<int>(std::ceil(total_sweep / max_step));
+        auto step = total_sweep / segments;
+
+        for (auto i = 0; i < segments; ++i) {
+            auto s = start + i * step;
+            auto e = start + (i + 1) * step;
+            auto arc_segment = CreateSingleBezierArc(center, radius, s, e);
+
+            if (i > 0 && !result.empty()) {
+                result.insert(result.end(), arc_segment.begin() + 1, arc_segment.end());
+            } else {
+                result.insert(result.end(), arc_segment.begin(), arc_segment.end());
+            }
+        }
+        return result;
+    }
+
+    auto ColorQuantizationKMeans(Image &img, int k) -> std::expected<void, boost::system::error_code> {
+        struct ClusterData {
+            double sum = 0.0;
+            int count = 0;
+        };
+
+        if (k <= 0) return {};
+
+        const int rows = img.HeightGray();
+        const int cols = img.WidthGray();
+        const auto num_pixels = rows * cols;
+
+        if (num_pixels == 0) return {};
+
+        const auto safe_k = (static_cast<size_t>(k) > static_cast<size_t>(num_pixels)) ? num_pixels : k;
+
+        std::vector<double> centroids(safe_k);
+        std::mt19937 gen(42);
+        std::uniform_int_distribution<int> dist_x(0, cols - 1);
+        std::uniform_int_distribution<int> dist_y(0, rows - 1);
+
+        for (auto i = 0; i < safe_k; ++i) {
+            centroids[i] = static_cast<double>(img(dist_x(gen), dist_y(gen)));
+        }
+
+        const auto max_iters = 20;
+        std::vector<int> labels(num_pixels, -1);
+
+        auto get_dist_sq = [](double val, double center) {
+            return (val - center) * (val - center);
+        };
+
+        for (auto iter = 0; iter < max_iters; ++iter) {
+            std::vector<ClusterData> new_centroids(safe_k);
+
+            auto changed = false;
+
+            for (auto y = 0; y < rows; ++y) {
+                for (auto x = 0; x < cols; ++x) {
+                    auto val = img(x, y);
+
+                    auto min_d = std::numeric_limits<double>::max();
+                    auto best_c = 0;
+
+                    for (auto j = 0; j < safe_k; ++j) {
+                        auto d = get_dist_sq(val, centroids[j]);
+                        if (d < min_d) {
+                            min_d = d;
+                            best_c = j;
+                        }
+                    }
+
+                    auto linear_idx = y * cols + x;
+                    if (labels[linear_idx] != best_c) {
+                        changed = true;
+                        labels[linear_idx] = best_c;
+                    }
+
+                    new_centroids[best_c].sum += val;
+                    new_centroids[best_c].count++;
+                }
+            }
+
+            for (auto j = 0; j < safe_k; ++j) {
+                if (new_centroids[j].count > 0) {
+                    centroids[j] = new_centroids[j].sum / new_centroids[j].count;
+                } else {
+                    centroids[j] = static_cast<double>(img(dist_x(gen), dist_y(gen)));
+                }
+            }
+
+            if (!changed) break;
+        }
+
+        for (auto y = 0; y < rows; ++y) {
+            for (auto x = 0; x < cols; ++x) {
+                auto linear_idx = y * cols + x;
+                auto c = labels[linear_idx];
+
+                img(x, y) = static_cast<Image::gray_type>(std::clamp(centroids[c], 0.0, 255.0));
+            }
+        }
+
+        return {};
     }
 } // namespace improcessing
