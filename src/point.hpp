@@ -84,4 +84,48 @@ namespace improcessing {
         if (cr < -Point::EPS) return -1;
         return 0;
     }
+
+    struct Point3 : Point {
+        double z;
+
+        Point3() : Point(0, 0), z(0) {
+        }
+
+        Point3(double x, double y, double z) : Point(x, y), z(z) {
+        }
+
+        [[nodiscard]] auto Dot(const Point3 &o) const noexcept -> double { return x * o.x + y * o.y + z * o.z; }
+
+        [[nodiscard]] auto Cross(const Point3 &o) const noexcept -> Point3 {
+            return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};
+        }
+
+        [[nodiscard]] auto Len() const noexcept -> double { return std::sqrt(x * x + y * y + z * z); }
+
+        [[nodiscard]] auto Normalized() const noexcept -> Point3 {
+            double len = Len();
+            if (len <= EPS) return {0, 0, 0};
+            return {x / len, y / len, z / len};
+        }
+    };
+
+    inline auto operator+(const Point3 &a, const Point3 &b) noexcept -> Point3 {
+        return {a.x + b.x, a.y + b.y, a.z + b.z};
+    }
+
+    inline auto operator-(const Point3 &a, const Point3 &b) noexcept -> Point3 {
+        return {a.x - b.x, a.y - b.y, a.z - b.z};
+    }
+
+    inline auto operator*(const Point3 &p, double k) noexcept -> Point3 {
+        return {p.x * k, p.y * k, p.z * k};
+    }
+
+    inline auto operator*(double k, const Point3 &p) noexcept -> Point3 {
+        return p * k;
+    }
+
+    inline auto operator/(const Point3 &p, double k) noexcept -> Point3 {
+        return {p.x / k, p.y / k, p.z / k};
+    }
 } // namespace improcessing

@@ -81,6 +81,29 @@ int main(int argc, char *argv[]) {
 
     parser.add_subparser(command_lab4);
 
+    argparse::ArgumentParser command_lab5("lab5");
+    command_lab5.add_description("3D Projections and Animation");
+
+    auto k_param = 1000.0;
+    auto frames = 36;
+
+    command_lab5.add_argument("-k", "--perspective-k").scan<'g', double>().store_into(k_param).default_value(500.0).
+            help("Perspective center Z coordinate");
+
+    command_lab5.add_argument("--axis")
+            .nargs(3)
+            .scan<'g', double>()
+            .default_value(std::vector<double>{1.0, 1.0, 0.0})
+            .help("Rotation axis x y z");
+
+    command_lab5.add_argument("-n", "--frames").scan<'i', int>().store_into(frames).default_value(36).help(
+        "Number of frames for animation");
+
+    command_lab5.add_argument("-o", "--output-prefix").required().store_into(output).help(
+        "Output filename prefix (e.g. 'frame')");
+
+    parser.add_subparser(command_lab5);
+
     try {
         parser.parse_args(argc, argv);
     } catch (const std::exception &err) {
@@ -107,6 +130,15 @@ int main(int argc, char *argv[]) {
             return Laboratory3{};
         } else if (parser.is_subcommand_used(command_lab4)) {
             return Laboratory4{};
+        } else if (parser.is_subcommand_used(command_lab5)) {
+            auto axis = command_lab5.get<std::vector<double> >("--axis");
+
+            return Laboratory5{
+                .output_prefix = output,
+                .k = k_param,
+                .axis_x = axis[0], .axis_y = axis[1], .axis_z = axis[2],
+                .frames = frames
+            };
         }
 
         return std::nullopt;
@@ -521,6 +553,35 @@ int main(int argc, char *argv[]) {
 
             return {};
         },
+        [](const Laboratory5 &c) -> std::expected<void, boost::system::error_code> {
+            Point3 center(0, 0, 0);
+            Point3 size(150, 100, 80);
+            Point3 axis(c.axis_x, c.axis_y, c.axis_z);
+
+            for (int i = 0; i < c.frames; ++i) {
+                auto angle = (2.0 * M_PI * i) / c.frames;
+
+                auto fname_par = fmt::format("{}_parallel_{:03d}.png", c.output_prefix, i);
+                auto res = DoSmthWithImage(fname_par, [&](Image &img) {
+                    RenderParallelepiped(img, center, size, axis, angle, ProjectionType::kParallel, c.k);
+                }, 400, 400);
+
+                if (!res) {
+                    return std::unexpected{res.error()};
+                }
+
+                auto fname_persp = fmt::format("{}_perspective_{:03d}.png", c.output_prefix, i);
+                res = DoSmthWithImage(fname_persp, [&](Image &img) {
+                    RenderParallelepiped(img, center, size, axis, angle, ProjectionType::kPerspective, c.k);
+                }, 400, 400);
+
+                if (!res) {
+                    return std::unexpected{res.error()};
+                }
+            }
+
+            return {};
+        }
     };
 
     try {

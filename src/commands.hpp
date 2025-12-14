@@ -37,4 +37,11 @@ struct Laboratory3 {
 struct Laboratory4 {
 };
 
-using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3, Laboratory4>;
+struct Laboratory5 {
+    const std::string &output_prefix;
+    const double k;
+    const double axis_x, axis_y, axis_z;
+    const int frames;
+};
+
+using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3, Laboratory4, Laboratory5>;

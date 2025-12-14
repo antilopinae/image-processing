@@ -329,14 +329,15 @@ namespace improcessing {
     }
 
     static auto is_point_on_edges(const Point2D &p, const std::vector<Point2D> &poly) -> bool {
-        size_t n = poly.size();
+        auto n = poly.size();
         for (size_t i = 0; i < n; ++i) {
             if (is_on_segment(poly[i], poly[(i + 1) % n], p)) return true;
         }
         return false;
     }
 
-    static bool segments_intersect_exact(const Point2D &a, const Point2D &b, const Point2D &c, const Point2D &d) {
+    static auto segments_intersect_exact(const Point2D &a, const Point2D &b, const Point2D &c,
+                                         const Point2D &d) -> bool {
         auto cp1 = cross_product(a, b, c);
         auto cp2 = cross_product(a, b, d);
         auto cp3 = cross_product(c, d, a);
@@ -356,6 +357,7 @@ namespace improcessing {
     auto IsSimplePolygon(const std::vector<Point2D> &v) -> bool {
         size_t n = v.size();
         if (n < 4) return true;
+
         for (size_t i = 0; i < n; ++i) {
             for (size_t j = i + 2; j < n; ++j) {
                 if (i == 0 && j == n - 1) continue;
@@ -365,6 +367,7 @@ namespace improcessing {
                 }
             }
         }
+
         return true;
     }
 
@@ -373,8 +376,8 @@ namespace improcessing {
         if (n < 3) return false;
         if (!IsSimplePolygon(v)) return false;
 
-        bool has_pos = false;
-        bool has_neg = false;
+        auto has_pos = false;
+        auto has_neg = false;
 
         for (size_t i = 0; i < n; ++i) {
             auto cp = cross_product(v[i], v[(i + 1) % n], v[(i + 2) % n]);
@@ -393,36 +396,38 @@ namespace improcessing {
             min_y = std::min(min_y, (int) p.y);
             max_y = std::max(max_y, (int) p.y);
         }
+
         min_y = std::max(0, min_y);
         max_y = std::min((int) img.HeightRgb() - 1, max_y);
 
         for (int y = min_y; y <= max_y; ++y) {
             std::vector<int> nodes;
-            size_t n = vertices.size();
+            auto n = vertices.size();
+
             for (size_t i = 0; i < n; ++i) {
-                Point2D p1 = vertices[i];
-                Point2D p2 = vertices[(i + 1) % n];
+                auto p1 = vertices[i];
+                auto p2 = vertices[(i + 1) % n];
 
                 if (p1.y == p2.y) continue;
 
                 if ((p1.y < y && p2.y >= y) || (p2.y < y && p1.y >= y)) {
-                    double num = (double) y - (double) p1.y;
-                    double den = (double) p2.y - (double) p1.y;
-                    double delta_x = (double) p2.x - (double) p1.x;
+                    auto num = (double) y - (double) p1.y;
+                    auto den = (double) p2.y - (double) p1.y;
+                    auto delta_x = (double) p2.x - (double) p1.x;
 
-                    double x = (double) p1.x + (num / den) * delta_x;
+                    auto x = (double) p1.x + (num / den) * delta_x;
                     nodes.push_back((int) std::round(x));
                 }
             }
             std::sort(nodes.begin(), nodes.end());
 
             for (size_t i = 0; i + 1 < nodes.size(); i += 2) {
-                int x_start = std::max(0, nodes[i]);
-                int x_end = std::min((int) img.WidthRgb() - 1, nodes[i + 1]);
+                auto x_start = std::max(0, nodes[i]);
+                auto x_end = std::min((int) img.WidthRgb() - 1, nodes[i + 1]);
 
                 if (x_start > x_end) continue;
 
-                for (int x = x_start; x <= x_end; ++x) {
+                for (auto x = x_start; x <= x_end; ++x) {
                     img.GetRGBPixel(x, y) = color;
                 }
             }
@@ -455,10 +460,10 @@ namespace improcessing {
                     continue;
                 }
 
-                int wn = 0;
+                auto wn = 0;
                 for (size_t i = 0; i < poly.size(); ++i) {
-                    Point2D v1 = poly[i];
-                    Point2D v2 = poly[(i + 1) % poly.size()];
+                    auto v1 = poly[i];
+                    auto v2 = poly[(i + 1) % poly.size()];
 
                     if (v1.y <= p.y) {
                         if (v2.y > p.y) {
@@ -489,24 +494,24 @@ namespace improcessing {
         for (const auto &p: clipPoly) center = center + p;
         center = center / (double) clipPoly.size();
 
-        double t_enter = 0.0;
-        double t_leave = 1.0;
-        Point D = p1 - p0;
+        auto t_enter = 0.0;
+        auto t_leave = 1.0;
+        auto D = p1 - p0;
 
         for (size_t i = 0; i < clipPoly.size(); ++i) {
-            Point p_curr = clipPoly[i];
-            Point p_next = clipPoly[(i + 1) % clipPoly.size()];
+            auto p_curr = clipPoly[i];
+            auto p_next = clipPoly[(i + 1) % clipPoly.size()];
 
-            Point edge = p_next - p_curr;
+            auto edge = p_next - p_curr;
             Point normal{-edge.y, edge.x};
 
-            Point to_edge = (p_curr + p_next) * 0.5 - center;
+            auto to_edge = (p_curr + p_next) * 0.5 - center;
             if (normal.Dot(to_edge) < 0) {
                 normal = normal * -1.0;
             }
 
-            double num = normal.Dot(p_curr - p0);
-            double den = normal.Dot(D);
+            auto num = normal.Dot(p_curr - p0);
+            auto den = normal.Dot(D);
 
             if (std::abs(den) < Point::EPS) {
                 if (num < 0) return false;
@@ -522,23 +527,23 @@ namespace improcessing {
 
         if (t_enter > t_leave) return false;
 
-        Point saved_p0 = p0;
+        auto saved_p0 = p0;
         p0 = saved_p0 + D * t_enter;
         p1 = saved_p0 + D * t_leave;
         return true;
     }
 
-    static double get_signed_distance(const Point &p, const Point &a, const Point &b) {
+    static auto get_signed_distance(const Point &p, const Point &a, const Point &b) -> double {
         return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
     }
 
-    static Point intersect_lines_stable(const Point &s, const Point &e, const Point &a, const Point &b) {
-        double d1 = get_signed_distance(s, a, b);
-        double d2 = get_signed_distance(e, a, b);
+    static auto intersect_lines_stable(const Point &s, const Point &e, const Point &a, const Point &b) -> Point {
+        auto d1 = get_signed_distance(s, a, b);
+        auto d2 = get_signed_distance(e, a, b);
 
         if (std::abs(d1 - d2) < 1e-12) return s;
 
-        double t = d1 / (d1 - d2);
+        auto t = d1 / (d1 - d2);
         return s + (e - s) * t;
     }
 
@@ -546,27 +551,27 @@ namespace improcessing {
                                       const std::vector<Point> &clipPoly) -> std::vector<Point> {
         if (clipPoly.size() < 3 || subjectPoly.empty()) return subjectPoly;
 
-        double area = 0;
+        auto area = 0.0;
         for (size_t i = 0; i < clipPoly.size(); ++i) {
             area += clipPoly[i].x * clipPoly[(i + 1) % clipPoly.size()].y;
             area -= clipPoly[i].y * clipPoly[(i + 1) % clipPoly.size()].x;
         }
-        bool is_ccw = (area > 0);
+        auto is_ccw = (area > 0);
 
-        std::vector<Point> output = subjectPoly;
+        auto output = subjectPoly;
 
         for (size_t i = 0; i < clipPoly.size(); ++i) {
-            Point a = clipPoly[i];
-            Point b = clipPoly[(i + 1) % clipPoly.size()];
+            auto a = clipPoly[i];
+            auto b = clipPoly[(i + 1) % clipPoly.size()];
 
-            std::vector<Point> input = output;
+            auto input = output;
             output.clear();
             if (input.empty()) break;
 
-            Point s = input.back();
+            auto s = input.back();
             for (const auto &e: input) {
-                double dist_e = get_signed_distance(e, a, b);
-                double dist_s = get_signed_distance(s, a, b);
+                auto dist_e = get_signed_distance(e, a, b);
+                auto dist_s = get_signed_distance(s, a, b);
 
                 auto is_inside = [&](double dist) {
                     return is_ccw ? (dist >= -1e-9) : (dist <= 1e-9);
@@ -587,25 +592,115 @@ namespace improcessing {
     }
 
     auto BezierCubicCurve(Point p0, Point p1, Point p2, Point p3) -> std::vector<Point> {
-        double len = (p1 - p0).Len() + (p2 - p1).Len() + (p3 - p2).Len();
+        auto len = (p1 - p0).Len() + (p2 - p1).Len() + (p3 - p2).Len();
 
-        int steps = std::max(10, static_cast<int>(len * 2.0));
+        auto steps = std::max(10, static_cast<int>(len * 2.0));
         if (steps > 5000) steps = 5000;
 
         std::vector<Point> curve;
         curve.reserve(steps + 1);
 
-        for (int i = 0; i <= steps; i++) {
-            double t = double(i) / steps;
-            double u = 1.0 - t;
-            double tt = t * t;
-            double uu = u * u;
-            double uuu = uu * u;
-            double ttt = tt * t;
+        for (auto i = 0; i <= steps; i++) {
+            auto t = double(i) / steps;
+            auto u = 1.0 - t;
+            auto tt = t * t;
+            auto uu = u * u;
+            auto uuu = uu * u;
+            auto ttt = tt * t;
 
             Point p = p0 * uuu + p1 * (3 * uu * t) + p2 * (3 * u * tt) + p3 * ttt;
             curve.push_back(p);
         }
         return curve;
+    }
+
+    static auto rotate_point(Point3 p, Point3 axis, double angle) -> Point3 {
+        axis = axis.Normalized();
+        auto cos_theta = std::cos(angle);
+        auto sin_theta = std::sin(angle);
+
+        Point3 cross = axis.Cross(p);
+        auto dot = axis.Dot(p);
+
+        return p * cos_theta + cross * sin_theta + axis * dot * (1.0 - cos_theta);
+    }
+
+    static auto project_point(Point3 p, ProjectionType type, double k, double center_x, double center_y) -> Point {
+        double x_proj, y_proj;
+
+        if (type == ProjectionType::kParallel) {
+            x_proj = p.x;
+            y_proj = p.y;
+        } else {
+            auto div = 1.0 - p.z / k;
+            if (std::abs(div) < 1e-6) div = 1e-6;
+
+            x_proj = p.x / div;
+            y_proj = p.y / div;
+        }
+
+        return Point(center_x + x_proj, center_y - y_proj);
+    }
+
+    auto RenderParallelepiped(Image &img, Point3 obj_center, Point3 size,
+                              Point3 rotationAxis, double angle,
+                              ProjectionType type, double k) -> void {
+        auto w = size.x / 2.0;
+        auto h = size.y / 2.0;
+        auto d = size.z / 2.0;
+
+        std::vector<Point3> local_verts = {
+            {-w, -h, d}, {w, -h, d}, {w, h, d}, {-w, h, d}, // z > 0
+            {-w, -h, -d}, {w, -h, -d}, {w, h, -d}, {-w, h, -d} // z < 0
+        };
+
+        std::vector<std::vector<int> > faces = {
+            {0, 1, 2, 3}, // front
+            {1, 5, 6, 2}, // right
+            {5, 4, 7, 6}, // back
+            {4, 0, 3, 7}, // left
+            {3, 2, 6, 7}, // top
+            {4, 5, 1, 0} // bottom
+        };
+
+        std::vector<Point3> world_verts;
+        for (const auto &v: local_verts) {
+            Point3 rotated = rotate_point(v, rotationAxis, angle);
+            world_verts.push_back(rotated + obj_center);
+        }
+
+        auto screen_cx = img.WidthRgb() / 2.0;
+        auto screen_cy = img.HeightRgb() / 2.0;
+
+        auto cameraPos = (type == ProjectionType::kPerspective) ? Point3(0, 0, k) : Point3(0, 0, 1000000);
+
+        for (const auto &face_indices: faces) {
+            const auto &p0 = world_verts[face_indices[0]];
+            const auto &p1 = world_verts[face_indices[1]];
+            const auto &p2 = world_verts[face_indices[2]];
+
+            auto v1 = p1 - p0;
+            auto v2 = p2 - p0;
+            auto normal = v1.Cross(v2).Normalized();
+
+            auto face_center = (p0 + p2) * 0.5;
+            Point3 view_vec;
+
+            if (type == ProjectionType::kParallel) {
+                view_vec = Point3(0, 0, 1);
+            } else {
+                view_vec = (cameraPos - face_center).Normalized();
+            }
+
+            if (normal.Dot(view_vec) > 0) {
+                std::vector<Point2D> poly2d;
+                for (int idx: face_indices) {
+                    auto proj = project_point(world_verts[idx], type, k, screen_cx, screen_cy);
+                    poly2d.push_back(proj.ToPoint2D());
+                }
+
+                DrawPolygonEdges(img, poly2d, {200, 255, 200});
+            }
+        }
     }
 } // namespace improcessing

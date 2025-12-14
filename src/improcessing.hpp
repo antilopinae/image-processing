@@ -131,5 +131,22 @@ namespace improcessing {
     */
     auto BezierCubicCurve(Point p0, Point p1, Point p2, Point p3) -> std::vector<Point>;
 
+    enum class ProjectionType {
+        kParallel,
+        kPerspective
+    };
 
+    /*!
+     * @brief Renders a 3D parallelepiped with rotation, projection and hidden edges
+     * @param img Target image
+     * @param center Center of the object in 3D space
+     * @param size Dimensions
+     * @param rotationAxis Axis of rotation
+     * @param angle Rotation angle in radians
+     * @param type Projection type
+     * @param k Distance to the center of projection
+     */
+    auto RenderParallelepiped(Image &img, Point3 center, Point3 size,
+                              Point3 rotationAxis, double angle,
+                              ProjectionType type, double k) -> void;
 } // namespace improcessing
