@@ -206,22 +206,32 @@ Print lab1 blend:
 
 ![example_lab3_polygon_non_zero](./assets/polygon_filled2.png)
 
+![example_lab3_star_even_odd](./assets/lab3_star_EO.png)
+
+![example_lab3_star_non_zero](./assets/lab3_star_NZW.png)
+
 ### Laboratory 4
 
 #### Output images
 
 #### Cross-segments
 
-![example_lab4_](./assets/segment_cross_square.png)
+![example_lab4_cross_square](./assets/segment_cross_square.png)
 
-![example_lab4_](./assets/segment_inside_square.png)
+![example_lab4_inside_square](./assets/segment_inside_square.png)
 
-![example_lab4_](./assets/segment_outside_square.png)
+![example_lab4_outside_square](./assets/segment_outside_square.png)
+
+![example_lab4_cyrus_beck](./assets/lab4_cyrus_beck.png)
+
+![example_lab4_sutherland_hondgman](./assets/lab4_sutherland_hodgman.png)
 
 #### Bezier curves
 
-![example_lab4_](./assets/bezier_basic.png)
+![example_lab4_bezier_basic](./assets/bezier_basic.png)
 
-![example_lab4_](./assets/bezier_linearity.png)
+![example_lab4_bezier_linearity](./assets/bezier_linearity.png)
 
-![example_lab4_](./assets/bezier_symmetric.png)
+![example_lab4_bezier_symmetric](./assets/bezier_symmetric.png)
+
+![example_lab4_bezier_adaptive](./assets/lab4_bezier_adaptive.png)

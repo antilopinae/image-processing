@@ -317,282 +317,294 @@ namespace improcessing {
         return {};
     }
 
-    __always_inline static auto orient(const Point2D &a, const Point2D &b, const Point2D &c) -> int64_t {
-        int64_t abx = b.x - a.x;
-        int64_t aby = b.y - a.y;
-        int64_t acx = c.x - a.x;
-        int64_t acy = c.y - a.y;
-        return abx * acy - aby * acx;
+    static auto cross_product(const Point2D &a, const Point2D &b, const Point2D &c) -> int64_t {
+        return ((int64_t) b.x - (int64_t) a.x) * ((int64_t) c.y - (int64_t) a.y) -
+               ((int64_t) b.y - (int64_t) a.y) * ((int64_t) c.x - (int64_t) a.x);
     }
 
-    __always_inline static auto onSegment(const Point2D &a, const Point2D &b, const Point2D &p) -> bool {
-        if (__builtin_expect(orient(a, b, p) != 0, 1)) return false;
-
-        return (p.x >= (a.x < b.x ? a.x : b.x) &&
-                p.x <= (a.x > b.x ? a.x : b.x) &&
-                p.y >= (a.y < b.y ? a.y : b.y) &&
-                p.y <= (a.y > b.y ? a.y : b.y));
+    static auto is_on_segment(const Point2D &a, const Point2D &b, const Point2D &p) -> bool {
+        if (cross_product(a, b, p) != 0) return false;
+        return (p.x >= std::min(a.x, b.x) && p.x <= std::max(a.x, b.x) &&
+                p.y >= std::min(a.y, b.y) && p.y <= std::max(a.y, b.y));
     }
 
-    __always_inline static auto segmentsIntersect(
-        const Point2D &p1, const Point2D &p2,
-        const Point2D &q1, const Point2D &q2) -> bool {
-        // AABB
-        if (std::max(p1.x, p2.x) < std::min(q1.x, q2.x)) return false;
-        if (std::max(q1.x, q2.x) < std::min(p1.x, p2.x)) return false;
-        if (std::max(p1.y, p2.y) < std::min(q1.y, q2.y)) return false;
-        if (std::max(q1.y, q2.y) < std::min(p1.y, p2.y)) return false;
-
-        int64_t o1 = orient(p1, p2, q1);
-        int64_t o2 = orient(p1, p2, q2);
-        if (__builtin_expect((int64_t) o1 * o2 < 0, 0)) {
-            int64_t o3 = orient(q1, q2, p1);
-            int64_t o4 = orient(q1, q2, p2);
-            return (o3 * o4 < 0);
+    static auto is_point_on_edges(const Point2D &p, const std::vector<Point2D> &poly) -> bool {
+        size_t n = poly.size();
+        for (size_t i = 0; i < n; ++i) {
+            if (is_on_segment(poly[i], poly[(i + 1) % n], p)) return true;
         }
+        return false;
+    }
 
-        if (o1 == 0 && onSegment(p1, p2, q1)) return true;
-        if (o2 == 0 && onSegment(p1, p2, q2)) return true;
+    static bool segments_intersect_exact(const Point2D &a, const Point2D &b, const Point2D &c, const Point2D &d) {
+        auto cp1 = cross_product(a, b, c);
+        auto cp2 = cross_product(a, b, d);
+        auto cp3 = cross_product(c, d, a);
+        auto cp4 = cross_product(c, d, b);
 
-        int64_t o3 = orient(q1, q2, p1);
-        int64_t o4 = orient(q1, q2, p2);
-        if (o3 == 0 && onSegment(q1, q2, p1)) return true;
-        if (o4 == 0 && onSegment(q1, q2, p2)) return true;
+        if (((cp1 > 0 && cp2 < 0) || (cp1 < 0 && cp2 > 0)) &&
+            ((cp3 > 0 && cp4 < 0) || (cp3 < 0 && cp4 > 0)))
+            return true;
 
+        if (cp1 == 0 && is_on_segment(a, b, c)) return true;
+        if (cp2 == 0 && is_on_segment(a, b, d)) return true;
+        if (cp3 == 0 && is_on_segment(c, d, a)) return true;
+        if (cp4 == 0 && is_on_segment(c, d, b)) return true;
         return false;
     }
 
     auto IsSimplePolygon(const std::vector<Point2D> &v) -> bool {
-        auto n = v.size();
+        size_t n = v.size();
         if (n < 4) return true;
+        for (size_t i = 0; i < n; ++i) {
+            for (size_t j = i + 2; j < n; ++j) {
+                if (i == 0 && j == n - 1) continue;
 
-        for (auto i = 0ul; i < n; i++) {
-            auto i2 = (i + 1 < n ? i + 1 : 0ul);
-            for (auto j = i + 1; j < n; j++) {
-                auto j2 = (j + 1 < n ? j + 1 : 0ul);
-
-                if (i == j) continue;
-                if (i2 == j) continue;
-                if (j2 == i) continue;
-
-                if (segmentsIntersect(v[i], v[i2], v[j], v[j2]))
+                if (segments_intersect_exact(v[i], v[(i + 1) % n], v[j], v[(j + 1) % n])) {
                     return false;
+                }
             }
         }
         return true;
     }
 
     auto IsConvexPolygon(const std::vector<Point2D> &v) -> bool {
-        auto n = v.size();
-        if (n < 4) return true;
+        size_t n = v.size();
+        if (n < 3) return false;
+        if (!IsSimplePolygon(v)) return false;
 
-        int s0 = 0;
-
-        for (auto i = 0ul; i < n; i++) {
-            auto i1 = (i + 1 < n ? i + 1 : 0ul);
-            auto i2 = (i1 + 1 < n ? i1 + 1 : 0ul);
-
-            int64_t cr = orient(v[i], v[i1], v[i2]);
-            if (cr == 0) continue;
-
-            int s = (cr > 0 ? 1 : -1);
-
-            if (s0 == 0) s0 = s;
-            else if (s0 != s) return false;
-        }
-        return true;
-    }
-
-    __always_inline static auto pointOnEdge(const Point2D &p,
-                                            const std::vector<Point2D> &v) -> bool {
-        const auto n = v.size();
-        for (auto i = 0ul; i < n; i++) {
-            auto j = (i == n - 1 ? 0ul : i + 1);
-
-            if (onSegment(v[i], v[j], p)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    __always_inline static auto pointInPolygonNonZero(const Point2D &P, const std::vector<Point2D> &poly) {
-        if (pointOnEdge(P, poly)) return true;
-
-        int winding = 0;
-        int n = (int) poly.size();
-        for (int i = 0; i < n; ++i) {
-            const Point2D &a = poly[i];
-            const Point2D &b = poly[(i + 1 == n) ? 0 : i + 1];
-
-            if (a.y == b.y) continue;
-
-            if (a.y <= P.y && b.y > P.y) {
-                if (orient(a, b, P) > 0)
-                    ++winding;
-            } else if (a.y > P.y && b.y <= P.y) {
-                if (orient(a, b, P) < 0)
-                    --winding;
-            }
-        }
-        return winding != 0;
-    }
-
-    auto FillPolygonNonZero(Image &img,
-                            const std::vector<Point2D> &poly,
-                            Pixel color) -> void {
-        auto minx = poly[0].x, maxx = poly[0].x;
-        auto miny = poly[0].y, maxy = poly[0].y;
-
-        for (auto &p: poly) {
-            minx = std::min(minx, p.x);
-            maxx = std::max(maxx, p.x);
-            miny = std::min(miny, p.y);
-            maxy = std::max(maxy, p.y);
-        }
-
-        for (auto y = miny; y <= maxy; y++)
-            for (auto x = minx; x <= maxx; x++)
-                if (pointInPolygonNonZero({x, y}, poly))
-                    img.GetRGBPixel(x, y) = color;
-    }
-
-    __always_inline static auto findIntersectionsY_EO(const std::vector<Point2D> &vertices,
-                                                      size_t y) -> std::vector<int> {
-        using namespace std;
-
-        vector<int> xInts;
-        size_t n = vertices.size();
+        bool has_pos = false;
+        bool has_neg = false;
 
         for (size_t i = 0; i < n; ++i) {
-            auto p1 = vertices[i];
-            auto p2 = vertices[(i + 1) % n];
-
-            if (p1.y == p2.y) continue;
-
-            if (y >= min(p1.y, p2.y) && y < max(p1.y, p2.y)) {
-                int dy = p2.y - p1.y;
-                int dx = p2.x - p1.x;
-                int x = p1.x + (y - p1.y) * dx / dy;
-                xInts.push_back(x);
-            }
+            auto cp = cross_product(v[i], v[(i + 1) % n], v[(i + 2) % n]);
+            if (cp > 0) has_pos = true;
+            if (cp < 0) has_neg = true;
+            if (has_pos && has_neg) return false;
         }
-
-        sort(xInts.begin(), xInts.end());
-        return xInts;
+        return true;
     }
 
     auto FillPolygonEvenOdd(Image &img, const std::vector<Point2D> &vertices, Pixel color) -> void {
         if (vertices.size() < 3) return;
 
-        using namespace std;
-
-        int minY = (int) img.HeightRgb(), maxY = 0;
+        int min_y = img.HeightRgb(), max_y = 0;
         for (const auto &p: vertices) {
-            minY = min(minY, (int) p.y);
-            maxY = max(maxY, (int) p.y);
+            min_y = std::min(min_y, (int) p.y);
+            max_y = std::max(max_y, (int) p.y);
         }
+        min_y = std::max(0, min_y);
+        max_y = std::min((int) img.HeightRgb() - 1, max_y);
 
-        for (int y = max(minY, 0); y < min(maxY, (int) img.HeightRgb()); ++y) {
-            vector<int> xInts = findIntersectionsY_EO(vertices, y);
+        for (int y = min_y; y <= max_y; ++y) {
+            std::vector<int> nodes;
+            size_t n = vertices.size();
+            for (size_t i = 0; i < n; ++i) {
+                Point2D p1 = vertices[i];
+                Point2D p2 = vertices[(i + 1) % n];
 
-            for (size_t i = 0; i + 1 < xInts.size(); i += 2) {
-                int xStart = max(xInts[i], 0);
-                int xEnd = min(xInts[i + 1], (int) img.WidthRgb() - 1);
-                for (int x = xStart; x <= xEnd; ++x) {
+                if (p1.y == p2.y) continue;
+
+                if ((p1.y < y && p2.y >= y) || (p2.y < y && p1.y >= y)) {
+                    double num = (double) y - (double) p1.y;
+                    double den = (double) p2.y - (double) p1.y;
+                    double delta_x = (double) p2.x - (double) p1.x;
+
+                    double x = (double) p1.x + (num / den) * delta_x;
+                    nodes.push_back((int) std::round(x));
+                }
+            }
+            std::sort(nodes.begin(), nodes.end());
+
+            for (size_t i = 0; i + 1 < nodes.size(); i += 2) {
+                int x_start = std::max(0, nodes[i]);
+                int x_end = std::min((int) img.WidthRgb() - 1, nodes[i + 1]);
+
+                if (x_start > x_end) continue;
+
+                for (int x = x_start; x <= x_end; ++x) {
+                    img.GetRGBPixel(x, y) = color;
+                }
+            }
+        }
+        DrawPolygonEdges(img, vertices, color);
+    }
+
+    auto FillPolygonNonZero(Image &img, const std::vector<Point2D> &poly, Pixel color) -> void {
+        if (poly.empty()) return;
+
+        auto minx = poly[0].x, maxx = poly[0].x;
+        auto miny = poly[0].y, maxy = poly[0].y;
+        for (const auto &p: poly) {
+            minx = std::min(minx, p.x);
+            maxx = std::max(maxx, p.x);
+            miny = std::min(miny, p.y);
+            maxy = std::max(maxy, p.y);
+        }
+        minx = std::max(minx, size_t(0));
+        miny = std::max(miny, size_t(0));
+        maxx = std::min(maxx, img.WidthRgb() - 1);
+        maxy = std::min(maxy, img.HeightRgb() - 1);
+
+        for (auto y = miny; y <= maxy; y++) {
+            for (auto x = minx; x <= maxx; x++) {
+                Point2D p{x, y};
+
+                if (is_point_on_edges(p, poly)) {
+                    img.GetRGBPixel(x, y) = color;
+                    continue;
+                }
+
+                int wn = 0;
+                for (size_t i = 0; i < poly.size(); ++i) {
+                    Point2D v1 = poly[i];
+                    Point2D v2 = poly[(i + 1) % poly.size()];
+
+                    if (v1.y <= p.y) {
+                        if (v2.y > p.y) {
+                            // an upward crossing
+                            if (cross_product(v1, v2, p) > 0) // P left of edge
+                                ++wn;
+                        }
+                    } else {
+                        if (v2.y <= p.y) {
+                            // a downward crossing
+                            if (cross_product(v1, v2, p) < 0) // P right of edge
+                                --wn;
+                        }
+                    }
+                }
+
+                if (wn != 0) {
                     img.GetRGBPixel(x, y) = color;
                 }
             }
         }
     }
 
-    auto CyrusBeckClipSegmentCW(Point &p0, Point &p1, const std::vector<Point> &polyCW) -> bool {
-        auto n = polyCW.size();
-        if (n < 3) return false;
+    auto CyrusBeckClipSegment(Point &p0, Point &p1, const std::vector<Point> &clipPoly) -> bool {
+        if (clipPoly.size() < 3) return false;
 
-        auto t_enter = 0.0;
-        auto t_leave = 1.0;
+        Point center{0, 0};
+        for (const auto &p: clipPoly) center = center + p;
+        center = center / (double) clipPoly.size();
 
-        auto sx = p1.x - p0.x;
-        auto sy = p1.y - p0.y;
+        double t_enter = 0.0;
+        double t_leave = 1.0;
+        Point D = p1 - p0;
 
-        for (size_t i = 0; i < n; ++i) {
-            const auto &vi = polyCW[i];
-            const auto &vi1 = polyCW[(i + 1) % n];
+        for (size_t i = 0; i < clipPoly.size(); ++i) {
+            Point p_curr = clipPoly[i];
+            Point p_next = clipPoly[(i + 1) % clipPoly.size()];
 
-            auto nx = vi1.y - vi.y;
-            auto ny = vi.x - vi1.x;
+            Point edge = p_next - p_curr;
+            Point normal{-edge.y, edge.x};
 
-            auto denom = nx * sx + ny * sy;
-            auto num = nx * (p0.x - vi.x) + ny * (p0.y - vi.y);
+            Point to_edge = (p_curr + p_next) * 0.5 - center;
+            if (normal.Dot(to_edge) < 0) {
+                normal = normal * -1.0;
+            }
 
-            if (fabs(denom) > Point::EPS) {
-                auto t = -num / denom;
-                if (denom > 0.0) {
-                    if (t > t_enter) {
-                        t_enter = t;
-                    }
-                } else {
-                    if (t < t_leave) {
-                        t_leave = t;
-                    }
-                }
-                if (t_enter - t_leave > Point::EPS) {
-                    return false;
-                }
+            double num = normal.Dot(p_curr - p0);
+            double den = normal.Dot(D);
+
+            if (std::abs(den) < Point::EPS) {
+                if (num < 0) return false;
             } else {
-                int cls = ClassifyPointToEdge(vi, vi1, p0);
-                if (cls > 0) {
-                    // LEFT
-                    return false;
+                double t = num / den;
+                if (den > 0) {
+                    t_leave = std::min(t_leave, t);
+                } else {
+                    t_enter = std::max(t_enter, t);
                 }
             }
         }
 
-        auto t0 = std::max(0.0, t_enter);
-        auto t1 = std::min(1.0, t_leave);
-        if (t0 > t1 + Point::EPS) {
-            return false;
-        }
+        if (t_enter > t_leave) return false;
 
-        auto d = p1 - p0;
-        auto c0 = p0 + d * t0;
-        auto c1 = p0 + d * t1;
-
-        // Update points
-        p0 = c0;
-        p1 = c1;
-
+        Point saved_p0 = p0;
+        p0 = saved_p0 + D * t_enter;
+        p1 = saved_p0 + D * t_leave;
         return true;
     }
 
-    auto BezierLine(const Point &p0, const Point &p1, double t) -> Point {
-        return p0 * (1.0 - t) + p1 * t;
+    static double get_signed_distance(const Point &p, const Point &a, const Point &b) {
+        return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
     }
 
-    auto BezierQuadratic(const Point &p0, const Point &p1, const Point &p2, double t) -> Point {
-        return BezierLine(
-            BezierLine(p0, p1, t),
-            BezierLine(p1, p2, t),
-            t
-        );
+    static Point intersect_lines_stable(const Point &s, const Point &e, const Point &a, const Point &b) {
+        double d1 = get_signed_distance(s, a, b);
+        double d2 = get_signed_distance(e, a, b);
+
+        if (std::abs(d1 - d2) < 1e-12) return s;
+
+        double t = d1 / (d1 - d2);
+        return s + (e - s) * t;
     }
 
-    auto BezierCubic(const Point &p0, const Point &p1, const Point &p2, const Point &p3, double t) -> Point {
-        return BezierLine(
-            BezierQuadratic(p0, p1, p2, t),
-            BezierQuadratic(p1, p2, p3, t),
-            t
-        );
+    auto ClipPolygonSutherlandHodgman(const std::vector<Point> &subjectPoly,
+                                      const std::vector<Point> &clipPoly) -> std::vector<Point> {
+        if (clipPoly.size() < 3 || subjectPoly.empty()) return subjectPoly;
+
+        double area = 0;
+        for (size_t i = 0; i < clipPoly.size(); ++i) {
+            area += clipPoly[i].x * clipPoly[(i + 1) % clipPoly.size()].y;
+            area -= clipPoly[i].y * clipPoly[(i + 1) % clipPoly.size()].x;
+        }
+        bool is_ccw = (area > 0);
+
+        std::vector<Point> output = subjectPoly;
+
+        for (size_t i = 0; i < clipPoly.size(); ++i) {
+            Point a = clipPoly[i];
+            Point b = clipPoly[(i + 1) % clipPoly.size()];
+
+            std::vector<Point> input = output;
+            output.clear();
+            if (input.empty()) break;
+
+            Point s = input.back();
+            for (const auto &e: input) {
+                double dist_e = get_signed_distance(e, a, b);
+                double dist_s = get_signed_distance(s, a, b);
+
+                auto is_inside = [&](double dist) {
+                    return is_ccw ? (dist >= -1e-9) : (dist <= 1e-9);
+                };
+
+                if (is_inside(dist_e)) {
+                    if (!is_inside(dist_s)) {
+                        output.push_back(intersect_lines_stable(s, e, a, b));
+                    }
+                    output.push_back(e);
+                } else if (is_inside(dist_s)) {
+                    output.push_back(intersect_lines_stable(s, e, a, b));
+                }
+                s = e;
+            }
+        }
+        return output;
     }
 
-    auto BezierCubicCurve(Point p0, Point p1, Point p2, Point p3, int steps) -> std::vector<Point> {
+    auto BezierCubicCurve(Point p0, Point p1, Point p2, Point p3) -> std::vector<Point> {
+        double len = (p1 - p0).Len() + (p2 - p1).Len() + (p3 - p2).Len();
+
+        int steps = std::max(10, static_cast<int>(len * 2.0));
+        if (steps > 5000) steps = 5000;
+
         std::vector<Point> curve;
         curve.reserve(steps + 1);
 
         for (int i = 0; i <= steps; i++) {
             double t = double(i) / steps;
-            curve.push_back(BezierCubic(p0, p1, p2, p3, t));
+            double u = 1.0 - t;
+            double tt = t * t;
+            double uu = u * u;
+            double uuu = uu * u;
+            double ttt = tt * t;
+
+            Point p = p0 * uuu + p1 * (3 * uu * t) + p2 * (3 * u * tt) + p3 * ttt;
+            curve.push_back(p);
         }
         return curve;
     }

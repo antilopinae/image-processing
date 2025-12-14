@@ -19,6 +19,22 @@ auto AddOutputArgument(argparse::ArgumentParser &parser, std::string &output) ->
     parser.add_argument("-o", "--output").required().store_into(output).help("specify the output file");
 }
 
+auto DoSmthWithImage(const std::string &im_name, const std::function<void(improcessing::Image &)> &payload,
+                     int width = 600,
+                     int height = 300) -> std::expected<void, boost::system::error_code> {
+    improcessing::Image img(width, height, improcessing::Image::Type::kRGB);
+    payload(img);
+
+    auto save = SaveImage(im_name, img, improcessing::Image::Type::kRGB);
+    if (!save) {
+        return std::unexpected{save.error()};
+    }
+
+    fmt::print("Saved an image: {}\n", (std::filesystem::current_path() / im_name).string());
+
+    return {};
+}
+
 int main(int argc, char *argv[]) {
     std::string input_first{};
     std::string input_second{};
@@ -177,18 +193,7 @@ int main(int argc, char *argv[]) {
         },
         [](const Laboratory3 &c) -> std::expected<void, boost::system::error_code> {
             std::vector<Point2D> poly = {
-                // {11, 25}, {30, 40}, {26, 20}, {18, 16}, {12, 26}, {10, 14}
                 {0, 0}, {0, 20}, {20, 20}, {20, 0}
-                // {50, 0},
-                // {60, 35},
-                // {100, 35},
-                // {65, 55},
-                // {80, 100},
-                // {50, 70},
-                // {20, 100},
-                // {35, 55},
-                // {0, 35},
-                // {40, 35}
             };
 
             int width = 600, height = 300;
@@ -255,33 +260,46 @@ int main(int argc, char *argv[]) {
                 "Determine polygon as {} and {}\n",
                 simple ? "simple" : "complex (self-intersecting)", convex ? "convex" : "non-convex");
 
+            {
+                int w = 500, h = 500;
+                Image imgEO(w, h, Image::Type::kRGB);
+                Image imgNZW(w, h, Image::Type::kRGB);
+
+                std::vector<Point2D> star = {
+                    {250, 50}, {310, 450}, {50, 200}, {450, 200}, {190, 450}
+                };
+
+                FillPolygonEvenOdd(imgEO, star, {100, 150, 255});
+                FillPolygonNonZero(imgNZW, star, {255, 100, 100});
+
+                SaveImage("lab3_star_EO.png", imgEO, Image::Type::kRGB);
+                SaveImage("lab3_star_NZW.png", imgNZW, Image::Type::kRGB);
+                fmt::print("Saved EO vs NZW comparison (lab3_star_*.png)\n");
+            }
+
+            {
+                std::vector<Point2D> convex = {{10, 10}, {50, 10}, {50, 50}, {10, 50}};
+                std::vector<Point2D> concave = {{10, 10}, {50, 10}, {30, 30}, {50, 50}, {10, 50}};
+                std::vector<Point2D> complex = {{10, 10}, {50, 50}, {50, 10}, {10, 50}};
+
+                assert(IsConvexPolygon(convex));
+                assert(!IsConvexPolygon(concave));
+                assert(!IsConvexPolygon(complex));
+
+                fmt::print("Square is convex: {}\n", IsConvexPolygon(convex)); // true
+                fmt::print("Arrow is convex: {}\n", IsConvexPolygon(concave)); // false
+                fmt::print("Bowtie is simple: {}\n", IsSimplePolygon(complex)); // false
+            }
+
             return {};
         },
         [](const Laboratory4 &c) -> std::expected<void, boost::system::error_code> {
-            std::vector<Point> squareCW = {{0, 0}, {0, 10}, {10, 10}, {10, 0}};
-
-            auto do_smth_with_image = [](const std::string &im_name, const std::function<void(Image &)> &payload,
-                                         int width = 600,
-                                         int height = 300) -> std::expected<void, boost::system::error_code> {
-                Image img(width, height, Image::Type::kRGB);
-                payload(img);
-
-                auto save = SaveImage(im_name, img, Image::Type::kRGB);
-                if (!save) {
-                    return std::unexpected{save.error()};
-                }
-
-                fmt::print("Saved an image: {}\n", (std::filesystem::current_path() / im_name).string());
-
-                return {};
-            };
-
-            auto res = do_smth_with_image("segment_cross_square.png", [](Image &img) -> void {
-                std::vector<Point> squareCW = {{5, 0}, {5, 10}, {15, 10}, {15, 0}};
+            auto res = DoSmthWithImage("segment_cross_square.png", [](Image &img) -> void {
+                std::vector<Point> square = {{5, 0}, {5, 10}, {15, 10}, {15, 0}};
                 Point A(0, 5), B(20, 5);
 
                 Point a = A, b = B;
-                bool inside = CyrusBeckClipSegmentCW(a, b, squareCW);
+                bool inside = CyrusBeckClipSegment(a, b, square);
 
                 assert(inside && "The segment not cross square!");
 
@@ -289,9 +307,9 @@ int main(int argc, char *argv[]) {
                 std::ignore = DrawLine(img, a.ToPoint2D(), b.ToPoint2D(), {100, 30, 150});
 
                 std::vector<Point2D> square2d;
-                square2d.reserve(squareCW.size());
+                square2d.reserve(square.size());
 
-                std::ranges::transform(squareCW.begin(), squareCW.end(), std::back_inserter(square2d), [](auto &p) {
+                std::ranges::transform(square.begin(), square.end(), std::back_inserter(square2d), [](auto &p) {
                     return p.ToPoint2D();
                 });
 
@@ -302,12 +320,12 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
-            res = do_smth_with_image("segment_inside_square.png", [](Image &img) -> void {
-                std::vector<Point> squareCW = {{5, 0}, {5, 10}, {15, 10}, {15, 0}};
+            res = DoSmthWithImage("segment_inside_square.png", [](Image &img) -> void {
+                std::vector<Point> square = {{5, 0}, {5, 10}, {15, 10}, {15, 0}};
                 Point A(5, 5), B(10, 10);
 
                 Point a = A, b = B;
-                bool inside = CyrusBeckClipSegmentCW(a, b, squareCW);
+                bool inside = CyrusBeckClipSegment(a, b, square);
 
                 assert(inside && "The segment not cross square!");
 
@@ -315,9 +333,9 @@ int main(int argc, char *argv[]) {
                 std::ignore = DrawLine(img, a.ToPoint2D(), b.ToPoint2D(), {100, 30, 150});
 
                 std::vector<Point2D> square2d;
-                square2d.reserve(squareCW.size());
+                square2d.reserve(square.size());
 
-                std::ranges::transform(squareCW.begin(), squareCW.end(), std::back_inserter(square2d), [](auto &p) {
+                std::ranges::transform(square.begin(), square.end(), std::back_inserter(square2d), [](auto &p) {
                     return p.ToPoint2D();
                 });
 
@@ -328,21 +346,21 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
-            res = do_smth_with_image("segment_outside_square.png", [](Image &img) -> void {
-                std::vector<Point> squareCW = {{5, 5}, {5, 15}, {15, 15}, {15, 5}};
+            res = DoSmthWithImage("segment_outside_square.png", [](Image &img) -> void {
+                std::vector<Point> square = {{5, 5}, {5, 15}, {15, 15}, {15, 5}};
                 Point A(0, 0), B(4, 4);
 
                 Point a = A, b = B;
-                bool inside = CyrusBeckClipSegmentCW(a, b, squareCW);
+                bool inside = CyrusBeckClipSegment(a, b, square);
 
                 assert(!inside && "The segment cross square!");
 
                 std::ignore = DrawLine(img, A.ToPoint2D(), B.ToPoint2D(), {200, 220, 255});
 
                 std::vector<Point2D> square2d;
-                square2d.reserve(squareCW.size());
+                square2d.reserve(square.size());
 
-                std::ranges::transform(squareCW.begin(), squareCW.end(), std::back_inserter(square2d), [](auto &p) {
+                std::ranges::transform(square.begin(), square.end(), std::back_inserter(square2d), [](auto &p) {
                     return p.ToPoint2D();
                 });
 
@@ -353,13 +371,13 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
-            res = do_smth_with_image("bezier_symmetric.png", [](Image &img) -> void {
+            res = DoSmthWithImage("bezier_symmetric.png", [](Image &img) -> void {
                 Point p0(10, 10);
                 Point p1(20, 40);
                 Point p2(40, 40);
                 Point p3(50, 10);
 
-                auto curve = BezierCubicCurve(p0, p1, p2, p3, 60);
+                auto curve = BezierCubicCurve(p0, p1, p2, p3);
 
                 assert(curve.front().Equal(p0));
                 assert(curve.back().Equal(p3));
@@ -381,10 +399,10 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
-            res = do_smth_with_image("bezier_linearity.png", [](Image &img) -> void {
+            res = DoSmthWithImage("bezier_linearity.png", [](Image &img) -> void {
                 Point p0(0, 0), p1(5, 5), p2(10, 10), p3(15, 15);
 
-                auto curve = BezierCubicCurve(p0, p1, p2, p3, 20);
+                auto curve = BezierCubicCurve(p0, p1, p2, p3);
 
                 for (size_t i = 0; i < curve.size(); i++) {
                     double t = double(i) / 20.0;
@@ -403,14 +421,13 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
-            res = do_smth_with_image("bezier_basic.png", [](Image &img) -> void {
+            res = DoSmthWithImage("bezier_basic.png", [](Image &img) -> void {
                 Point p0(2, 2);
                 Point p1(5, 15);
                 Point p2(15, 15);
                 Point p3(18, 2);
 
-                int steps = 40;
-                auto curve = BezierCubicCurve(p0, p1, p2, p3, steps);
+                auto curve = BezierCubicCurve(p0, p1, p2, p3);
 
                 assert(curve.size() == steps + 1);
 
@@ -426,6 +443,77 @@ int main(int argc, char *argv[]) {
                     img.GetRGBPixel(p.x, p.y) = {200, 255, 200};
                 }
             }, 20, 20);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = DoSmthWithImage("lab4_bezier_adaptive.png", [](Image &img)-> void {
+                img.ResizeRgb(600, 600);
+                Point p0(50, 550), p1(50, 50), p2(550, 50), p3(550, 550);
+
+                auto curve = BezierCubicCurve(p0, p1, p2, p3);
+
+                for (const auto &p: curve) {
+                    auto p2d = p.ToPoint2D();
+                    if (p2d.x < 600 && p2d.y < 600)
+                        img.GetRGBPixel(p2d.x, p2d.y) = {0, 255, 0};
+                }
+            });
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = DoSmthWithImage("lab4_cyrus_beck.png", [](Image &img)-> void {
+                img.ResizeRgb(500, 500);
+                // ccw
+                std::vector<Point> clipPoly = {{100, 300}, {300, 300}, {300, 100}, {100, 100}};
+
+                std::vector<Point2D> clip2d;
+                for (auto &p: clipPoly) clip2d.push_back(p.ToPoint2D());
+                std::ignore = DrawPolygonEdges(img, clip2d, {255, 255, 0});
+
+                std::vector<std::pair<Point, Point> > lines = {
+                    {{50, 200}, {350, 200}},
+                    {{150, 150}, {250, 250}},
+                    {{50, 50}, {400, 400}},
+                    {{50, 50}, {80, 80}}
+                };
+
+                for (auto [p0, p1]: lines) {
+                    std::ignore = DrawLine(img, p0.ToPoint2D(), p1.ToPoint2D(), {50, 50, 50});
+                    if (CyrusBeckClipSegment(p0, p1, clipPoly)) {
+                        std::ignore = DrawLine(img, p0.ToPoint2D(), p1.ToPoint2D(), {255, 0, 0});
+                    }
+                }
+            });
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = DoSmthWithImage("lab4_sutherland_hodgman.png", [](Image &img)-> void {
+                img.ResizeRgb(600, 600);
+                std::vector<Point> subject = {{100, 100}, {250, 50}, {400, 100}, {400, 400}, {100, 400}};
+                std::vector<Point> clip = {{200, 0}, {500, 250}, {200, 500}, {0, 250}};
+
+                auto result = ClipPolygonSutherlandHodgman(subject, clip);
+
+                std::vector<Point2D> sub2d, clip2d, res2d;
+                for (auto &p: subject) sub2d.push_back(p.ToPoint2D());
+                for (auto &p: clip) clip2d.push_back(p.ToPoint2D());
+                for (auto &p: result) res2d.push_back(p.ToPoint2D());
+
+                std::ignore = DrawPolygonEdges(img, sub2d, {100, 100, 100});
+                std::ignore = DrawPolygonEdges(img, clip2d, {255, 255, 0});
+
+                if (!res2d.empty()) {
+                    FillPolygonEvenOdd(img, res2d, {0, 255, 0});
+                    std::ignore = DrawPolygonEdges(img, res2d, {255, 255, 255});
+                }
+                fmt::print("Sutherland-Hodgman clipped polygon size: {}\n", result.size());
+            });
 
             if (!res) {
                 return std::unexpected{res.error()};
