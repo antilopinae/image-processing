@@ -60,6 +60,23 @@ namespace improcessing {
     auto DrawLine(Image &img, Point2D start, Point2D end,
                   Pixel color) -> std::expected<void, boost::system::error_code>;
 
+    enum class LineCap {
+        kButt, kSquare, kRound
+    };
+
+    /*!
+    * @brief Draw thick line in Image
+    * @param img Image for drawing
+    * @param start Coordinates of the beginning of the line
+    * @param end Coordinates of the end of the line
+    * @param thickness Thickness
+    * @param color Color of the line
+    * @param cap Line cap
+    * @return nothing or error code in failure
+    */
+    auto DrawThickLine(Image &img, Point2D start, Point2D end, double thickness,
+                       Pixel color, LineCap cap = LineCap::kButt) -> void;
+
     /*!
     * @brief Draw polygon in Image
     * @param img Image for drawing

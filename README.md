@@ -210,6 +210,8 @@ Print lab1 blend:
 
 ![example_lab3_star_non_zero](./assets/lab3_star_NZW.png)
 
+![example_lab3_lines](./assets/lab3_thick_lines.png)
+
 ### Laboratory 4
 
 #### Output images
@@ -330,11 +332,15 @@ Result
 
 ![example_hw1](./assets/hw1.png)
 
+![example_hw1](./assets/hw1_complex_star.png)
+
 ### Homework 2
 
 #### Output images
 
 ![example_hw2](./assets/hw2.png)
+
+![example_hw2](./assets/hw2_arc_gallery.png)
 
 ### Homework 3
 

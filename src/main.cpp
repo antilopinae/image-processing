@@ -84,10 +84,10 @@ int main(int argc, char *argv[]) {
     argparse::ArgumentParser command_lab5("lab5");
     command_lab5.add_description("3D Projections and Animation");
 
-    auto k_param = 1000.0;
+    auto k_param = 200.0;
     auto frames = 36;
 
-    command_lab5.add_argument("-k", "--perspective-k").scan<'g', double>().store_into(k_param).default_value(500.0).
+    command_lab5.add_argument("-k", "--perspective-k").scan<'g', double>().store_into(k_param).default_value(200.0).
             help("Perspective center Z coordinate");
 
     command_lab5.add_argument("--axis")
@@ -375,6 +375,16 @@ int main(int argc, char *argv[]) {
                 fmt::print("Bowtie is simple: {}\n", IsSimplePolygon(complex)); // false
             }
 
+            auto res = DoSmthWithImage("lab3_thick_lines.png", [](Image &img) {
+                DrawThickLine(img, {50, 50}, {200, 50}, 10, {255, 0, 0}, LineCap::kButt);
+                DrawThickLine(img, {50, 100}, {200, 100}, 10, {0, 255, 0}, LineCap::kSquare);
+                DrawThickLine(img, {50, 150}, {200, 150}, 10, {0, 0, 255}, LineCap::kRound);
+            }, 300, 250);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
             return {};
         },
         [](const Laboratory4 &c) -> std::expected<void, boost::system::error_code> {
@@ -603,6 +613,17 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
+            res = DoSmthWithImage("lab4_degenerate_test.png", [](Image &img) {
+                std::vector<Point> degeneratePoly = {{10, 10}, {50, 10}, {30, 10}};
+                Point a(0, 0), b(100, 100);
+                bool clipped = CyrusBeckClipSegment(a, b, degeneratePoly);
+                assert(!clipped && "Should not clip against a line-polygon");
+            });
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
             return {};
         },
         [](const Laboratory5 &c) -> std::expected<void, boost::system::error_code> {
@@ -639,18 +660,45 @@ int main(int argc, char *argv[]) {
                 {100, 100}, {400, 100}, {100, 400}, {400, 400}
             };
 
-            DoSmthWithImage(c.output_filename + "_original.png", [&](Image &img) {
-                DrawPolygonEdges(img, poly, {100, 100, 100}); // Серый контур
+            auto res = DoSmthWithImage(c.output_filename + "_original.png", [&](Image &img) {
+                DrawPolygonEdges(img, poly, {100, 100, 100});
             }, 500, 500);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
 
             auto contour = ExtractExteriorContour(poly, 500, 500);
 
-            DoSmthWithImage(c.output_filename, [&](Image &img) {
+            res = DoSmthWithImage(c.output_filename, [&](Image &img) {
                 FillPolygonNonZero(img, poly, {50, 50, 150});
                 DrawPolygonEdges(img, contour, {255, 255, 0});
             }, 500, 500);
 
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
             fmt::print("Extracted contour size: {} points\n", contour.size());
+
+            res = DoSmthWithImage("hw1_contour.png", [](Image &img) {
+                std::vector<Point2D> star = {{50, 50}, {450, 450}, {450, 50}, {50, 450}, {250, 10}};
+
+                FillPolygonNonZero(img, star, {50, 0, 0});
+                auto contour = ExtractExteriorContour(star, 500, 500);
+
+                for (size_t i = 0; i < contour.size(); ++i) {
+                    Point2D p1 = contour[i];
+                    Point2D p2 = contour[(i + 1) % contour.size()];
+
+                    DrawLine(img, p1, p2, {0, 255, 0});
+                }
+            }, 500, 500);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
             return {};
         },
 
@@ -658,7 +706,7 @@ int main(int argc, char *argv[]) {
             Point center(c.center_x, c.center_y);
             auto arc_points = MakeCircleArc(center, c.radius, c.angle_start, c.angle_end);
 
-            DoSmthWithImage(c.output_filename, [&](Image &img) {
+            auto res = DoSmthWithImage(c.output_filename, [&](Image &img) {
                 for (const auto &p: arc_points) {
                     auto p2d = p.ToPoint2D();
                     img.GetRGBPixel(p2d.x, p2d.y) = {0, 255, 0};
@@ -667,6 +715,35 @@ int main(int argc, char *argv[]) {
                 DrawLine(img, center.ToPoint2D(), arc_points.front().ToPoint2D(), {100, 100, 100});
                 DrawLine(img, center.ToPoint2D(), arc_points.back().ToPoint2D(), {100, 100, 100});
             }, 600, 600);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
+            res = DoSmthWithImage("hw2_arc_gallery.png", [](Image &img) {
+                auto a1 = MakeCircleArc({150, 150}, 100, 0, 90);
+                auto a2 = MakeCircleArc({350, 150}, 100, 0, 360);
+                auto a3 = MakeCircleArc({150, 350}, 80, 45, 315);
+
+                for (const auto &p: a1) {
+                    auto p2d = p.ToPoint2D();
+                    img.GetRGBPixel(p2d.x, p2d.y) = {0, 255, 0};
+                }
+
+                for (const auto &p: a2) {
+                    auto p2d = p.ToPoint2D();
+                    img.GetRGBPixel(p2d.x, p2d.y) = {0, 255, 0};
+                }
+
+                for (const auto &p: a3) {
+                    auto p2d = p.ToPoint2D();
+                    img.GetRGBPixel(p2d.x, p2d.y) = {0, 255, 0};
+                }
+            }, 600, 600);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
 
             return {};
         },

@@ -7,6 +7,8 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <matrix4x4.hpp>
+#include <set>
 
 namespace improcessing {
     auto ReadImage(const std::string &filename) -> std::expected<Image, boost::system::error_code> {
@@ -318,6 +320,44 @@ namespace improcessing {
         return {};
     }
 
+    auto DrawThickLine(Image &img, Point2D s, Point2D e, double t, Pixel color, LineCap cap) -> void {
+        Point start(s.x, s.y), end(e.x, e.y);
+        auto dir = (end - start).Normalized();
+        Point normal{-dir.y, dir.x};
+        auto r = t / 2.0;
+
+        std::vector<Point2D> box;
+        auto p1 = start + normal * r, p2 = end + normal * r;
+        auto p3 = end - normal * r, p4 = start - normal * r;
+
+        if (cap == LineCap::kSquare) {
+            p1 = p1 - dir * r;
+            p4 = p4 - dir * r;
+            p2 = p2 + dir * r;
+            p3 = p3 + dir * r;
+        }
+
+        box = {p1.ToPoint2D(), p2.ToPoint2D(), p3.ToPoint2D(), p4.ToPoint2D()};
+        FillPolygonNonZero(img, box, color);
+
+        if (cap == LineCap::kRound) {
+            auto draw_circle = [&](Point center) {
+                for (int dy = -r; dy <= r; ++dy) {
+                    for (int dx = -r; dx <= r; ++dx) {
+                        if (dx * dx + dy * dy <= r * r) {
+                            int px = center.x + dx, py = center.y + dy;
+                            if (px >= 0 && px < img.WidthRgb() && py >= 0 && py < img.HeightRgb())
+                                img.GetRGBPixel(px, py) = color;
+                        }
+                    }
+                }
+            };
+
+            draw_circle(start);
+            draw_circle(end);
+        }
+    }
+
     static auto cross_product(const Point2D &a, const Point2D &b, const Point2D &c) -> int64_t {
         return ((int64_t) b.x - (int64_t) a.x) * ((int64_t) c.y - (int64_t) a.y) -
                ((int64_t) b.y - (int64_t) a.y) * ((int64_t) c.x - (int64_t) a.x);
@@ -389,8 +429,21 @@ namespace improcessing {
         return true;
     }
 
+    static auto is_degenerate(const std::vector<Point2D> &poly) -> bool {
+        if (poly.size() < 3) return true;
+
+        auto area = 0.0;
+        for (auto i = 0; i < poly.size(); ++i) {
+            area += (double) poly[i].x * poly[(i + 1) % poly.size()].y;
+            area -= (double) poly[i].y * poly[(i + 1) % poly.size()].x;
+        }
+
+        return std::abs(area) < 1e-6;
+    }
+
     auto FillPolygonEvenOdd(Image &img, const std::vector<Point2D> &vertices, Pixel color) -> void {
         if (vertices.size() < 3) return;
+        if (is_degenerate(vertices)) return;
 
         int min_y = img.HeightRgb(), max_y = 0;
         for (const auto &p: vertices) {
@@ -490,6 +543,11 @@ namespace improcessing {
 
     auto CyrusBeckClipSegment(Point &p0, Point &p1, const std::vector<Point> &clipPoly) -> bool {
         if (clipPoly.size() < 3) return false;
+
+        auto area = 0.0;
+        for (size_t i = 0; i < clipPoly.size(); ++i)
+            area += clipPoly[i].Cross(clipPoly[(i + 1) % clipPoly.size()]);
+        if (std::abs(area) < 1e-9) return false;
 
         Point center{0, 0};
         for (const auto &p: clipPoly) center = center + p;
@@ -633,11 +691,11 @@ namespace improcessing {
             x_proj = p.x;
             y_proj = p.y;
         } else {
-            auto div = 1.0 - p.z / k;
-            if (std::abs(div) < 1e-6) div = 1e-6;
-
-            x_proj = p.x / div;
-            y_proj = p.y / div;
+            double dist = k - p.z;
+            if (dist < 1.0) dist = 1.0;
+            double factor = k / dist;
+            x_proj = p.x * factor;
+            y_proj = p.y * factor;
         }
 
         return Point(center_x + x_proj, center_y - y_proj);
@@ -664,10 +722,12 @@ namespace improcessing {
             {4, 5, 1, 0} // bottom
         };
 
+        Matrix4x4 rot = Matrix4x4::Rotation(rotationAxis, angle);
+
         std::vector<Point3> world_verts;
         for (const auto &v: local_verts) {
-            Point3 rotated = rotate_point(v, rotationAxis, angle);
-            world_verts.push_back(rotated + obj_center);
+            Point3 worldP = rot.Transform(v) + obj_center;
+            world_verts.push_back(worldP);
         }
 
         auto screen_cx = img.WidthRgb() / 2.0;
@@ -837,16 +897,27 @@ namespace improcessing {
 
         const auto safe_k = (static_cast<size_t>(k) > static_cast<size_t>(num_pixels)) ? num_pixels : k;
 
+        auto max_attempt = 100;
         std::vector<double> centroids(safe_k);
+        std::set<uint8_t> used_colors;
+
         std::mt19937 gen(42);
         std::uniform_int_distribution<int> dist_x(0, cols - 1);
         std::uniform_int_distribution<int> dist_y(0, rows - 1);
 
         for (auto i = 0; i < safe_k; ++i) {
-            centroids[i] = static_cast<double>(img(dist_x(gen), dist_y(gen)));
+            auto color = img(dist_x(gen), dist_y(gen));
+            if (!used_colors.contains(color)) {
+                centroids[i] = static_cast<double>(color);
+                used_colors.insert(color);
+            } else {
+                --i;
+                --max_attempt;
+                if (max_attempt <= 0) return std::unexpected{boost::system::error_code{}};
+            }
         }
 
-        const auto max_iters = 20;
+        const auto max_iters = 200;
         std::vector<int> labels(num_pixels, -1);
 
         auto get_dist_sq = [](double val, double center) {
