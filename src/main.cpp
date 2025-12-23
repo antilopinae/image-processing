@@ -385,6 +385,24 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
+            res = DoSmthWithImage("lab3_thick_lines_demo.png", [](Image &img) {
+                img.ResizeRgb(600, 600);
+
+                DrawThickLine(img, {50, 50}, {550, 50}, 20, {255, 100, 100}, LineCap::kButt);
+                DrawThickLine(img, {50, 100}, {550, 100}, 20, {100, 255, 100}, LineCap::kSquare);
+                DrawThickLine(img, {50, 150}, {550, 150}, 20, {100, 100, 255}, LineCap::kRound);
+
+                DrawThickLine(img, {100, 200}, {100, 550}, 30, {200, 200, 0}, LineCap::kButt);
+                DrawThickLine(img, {200, 200}, {200, 550}, 30, {0, 200, 200}, LineCap::kRound);
+
+                DrawThickLine(img, {300, 250}, {550, 500}, 50, {255, 255, 255}, LineCap::kRound);
+                DrawThickLine(img, {300, 500}, {550, 250}, 5, {255, 0, 255}, LineCap::kSquare);
+
+                DrawLine(img, {50, 50}, {550, 50}, {0, 0, 0});
+                DrawLine(img, {50, 100}, {550, 100}, {0, 0, 0});
+                DrawLine(img, {50, 150}, {550, 150}, {0, 0, 0});
+            }, 600, 600);
+
             return {};
         },
         [](const Laboratory4 &c) -> std::expected<void, boost::system::error_code> {
@@ -624,6 +642,81 @@ int main(int argc, char *argv[]) {
                 return std::unexpected{res.error()};
             }
 
+            res = DoSmthWithImage("lab4_complex_convex_clipping.png", [](Image &img) {
+                img.ResizeRgb(600, 600);
+                std::vector<Point> clipPoly = {
+                    {100, 300}, {150, 100}, {450, 100},
+                    {500, 300}, {450, 500}, {150, 500}
+                };
+
+                std::vector<Point2D> clip2d;
+                for (auto &p: clipPoly) clip2d.push_back(p.ToPoint2D());
+                std::ignore = DrawPolygonEdges(img, clip2d, {255, 255, 0});
+
+                std::vector<std::pair<Point, Point> > lines = {
+                    {{50, 300}, {550, 300}},
+                    {{300, 50}, {300, 550}},
+                    {{100, 100}, {500, 500}},
+                    {{150, 100}, {450, 500}},
+                    {{50, 50}, {150, 100}},
+                    {{450, 100}, {550, 100}}
+                };
+
+                for (auto [p0, p1]: lines) {
+                    std::ignore = DrawLine(img, p0.ToPoint2D(), p1.ToPoint2D(), {60, 60, 60});
+
+                    Point a = p0, b = p1;
+                    if (CyrusBeckClipSegment(a, b, clipPoly)) {
+                        std::ignore = DrawLine(img, a.ToPoint2D(), b.ToPoint2D(), {0, 255, 0});
+                    }
+                }
+            }, 600, 600);
+
+            res = DoSmthWithImage("lab4_star_sutherland_hodgman.png", [](Image &img) {
+                img.ResizeRgb(600, 600);
+                std::vector<Point> star = {
+                    {300, 50}, {350, 200}, {500, 200}, {380, 300},
+                    {450, 450}, {300, 350}, {150, 450}, {220, 300},
+                    {100, 200}, {250, 200}
+                };
+
+                std::vector<Point> clip = {
+                    {300, 100}, {500, 300}, {300, 500}, {100, 300}
+                };
+
+                auto result = ClipPolygonSutherlandHodgman(star, clip);
+
+                std::vector<Point2D> star2d, clip2d, res2d;
+                for (auto &p: star) star2d.push_back(p.ToPoint2D());
+                for (auto &p: clip) clip2d.push_back(p.ToPoint2D());
+                for (auto &p: result) res2d.push_back(p.ToPoint2D());
+
+                std::ignore = DrawPolygonEdges(img, star2d, {100, 100, 100});
+                std::ignore = DrawPolygonEdges(img, clip2d, {255, 255, 0});
+
+                if (!res2d.empty()) {
+                    FillPolygonEvenOdd(img, res2d, {0, 100, 0});
+                    std::ignore = DrawPolygonEdges(img, res2d, {0, 255, 255});
+                }
+            }, 600, 600);
+
+            res = DoSmthWithImage("lab4_edge_alignment_test.png", [](Image &img) {
+                img.ResizeRgb(400, 400);
+                std::vector<Point> rect = {{100, 100}, {300, 100}, {300, 300}, {100, 300}};
+
+                Point p0(50, 100), p1(350, 100);
+
+                std::vector<Point2D> rect2d;
+                for (auto &p: rect) rect2d.push_back(p.ToPoint2D());
+                std::ignore = DrawPolygonEdges(img, rect2d, {255, 255, 0});
+
+                std::ignore = DrawLine(img, p0.ToPoint2D(), p1.ToPoint2D(), {60, 60, 60});
+
+                if (CyrusBeckClipSegment(p0, p1, rect)) {
+                    std::ignore = DrawLine(img, p0.ToPoint2D(), p1.ToPoint2D(), {255, 0, 0});
+                }
+            }, 400, 400);
+
             return {};
         },
         [](const Laboratory5 &c) -> std::expected<void, boost::system::error_code> {
@@ -651,6 +744,40 @@ int main(int argc, char *argv[]) {
                 if (!res) {
                     return std::unexpected{res.error()};
                 }
+            }
+
+            for (int i = 0; i < c.frames; ++i) {
+                double t = (2.0 * M_PI * i) / c.frames;
+
+                double radius = 150.0;
+                Point3 pos1(radius * cos(t), 0, radius * sin(t));
+                Point3 pos2(radius * cos(t + M_PI), 0, radius * sin(t + M_PI));
+
+                SceneObject cuboid1{
+                    .center = pos1,
+                    .size = {60, 60, 60},
+                    .rotation_axis = {0, 1, 0},
+                    .rotation_angle = t * 2,
+                    .face_colors = {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0}, {255, 0, 255}, {0, 255, 255}}
+                };
+
+                SceneObject cuboid2{
+                    .center = pos2,
+                    .size = {80, 40, 50},
+                    .rotation_axis = {1, 1, 0},
+                    .rotation_angle = -t * 1.5,
+                    .face_colors = {{128, 0, 0}, {0, 128, 0}, {0, 0, 128}, {128, 128, 0}, {128, 0, 128}, {0, 128, 128}}
+                };
+
+                auto fname = fmt::format("{}_{:03d}.png", c.output_prefix, i);
+                auto res = DoSmthWithImage(fname, [&](Image &img) {
+                    RenderLab5Scene(img,
+                                    cuboid1, PerspectiveType::kTwoPoint,
+                                    cuboid2, PerspectiveType::kThreePoint,
+                                    c.k);
+                }, 600, 600);
+
+                if (!res) return std::unexpected{res.error()};
             }
 
             return {};
@@ -698,6 +825,71 @@ int main(int argc, char *argv[]) {
             if (!res) {
                 return std::unexpected{res.error()};
             }
+
+            res = DoSmthWithImage("hw1_complex_star.png", [](Image &img) {
+                img.ResizeRgb(600, 600);
+                std::vector<Point2D> star = {
+                    {300, 50}, {350, 550}, {100, 200}, {500, 200},
+                    {250, 550}, {300, 50}, {450, 400}, {150, 400}
+                };
+
+                FillPolygonNonZero(img, star, {40, 40, 80});
+
+                auto contour = ExtractExteriorContour(star, 600, 600);
+
+                for (size_t i = 0; i < contour.size(); ++i) {
+                    DrawThickLine(img, contour[i], contour[(i + 1) % contour.size()], 2.0, {255, 0, 0});
+                }
+                fmt::print("HW1 Complex Star: Contour size {} points\n", contour.size());
+            }, 600, 600);
+
+            res = DoSmthWithImage("hw1_bowtie.png", [](Image &img) {
+                img.ResizeRgb(500, 500);
+                std::vector<Point2D> poly = {{100, 100}, {400, 400}, {400, 100}, {100, 400}};
+
+                auto contour = ExtractExteriorContour(poly, 500, 500);
+
+                DrawPolygonEdges(img, poly, {80, 80, 80});
+
+                for (size_t i = 0; i < contour.size(); ++i) {
+                    DrawThickLine(img, contour[i], contour[(i + 1) % contour.size()], 3.0, {0, 255, 0});
+                }
+                fmt::print("Test Bowtie: Original 4 points -> Contour {} points\n", contour.size());
+            }, 500, 500);
+
+            res = DoSmthWithImage("hw1_star_silhouette.png", [](Image &img) {
+                img.ResizeRgb(500, 500);
+                std::vector<Point2D> star = {
+                    {250, 50}, {310, 450}, {50, 200}, {450, 200}, {190, 450}
+                };
+
+                auto contour = ExtractExteriorContour(star, 500, 500);
+
+                FillPolygonNonZero(img, star, {40, 40, 60});
+                DrawPolygonEdges(img, star, {100, 100, 100});
+
+                for (size_t i = 0; i < contour.size(); ++i) {
+                    DrawLine(img, contour[i], contour[(i + 1) % contour.size()], {255, 255, 0});
+                }
+                fmt::print("Test Star: Original 5 points -> Contour {} points\n", contour.size());
+            }, 500, 500);
+
+            res = DoSmthWithImage("hw1_overlap_mesh.png", [](Image &img) {
+                img.ResizeRgb(600, 600);
+                std::vector<Point2D> complex = {
+                    {100, 100}, {500, 100}, {500, 500}, {200, 500},
+                    {200, 50}, {400, 50}, {400, 550}, {50, 550}
+                };
+
+                auto contour = ExtractExteriorContour(complex, 600, 600);
+
+                DrawPolygonEdges(img, complex, {70, 70, 70});
+
+                for (size_t i = 0; i < contour.size(); ++i) {
+                    DrawThickLine(img, contour[i], contour[(i + 1) % contour.size()], 2.0, {255, 0, 0});
+                }
+                fmt::print("Test Overlap: Original 8 points -> Contour {} points\n", contour.size());
+            }, 600, 600);
 
             return {};
         },

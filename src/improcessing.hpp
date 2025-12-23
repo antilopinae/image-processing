@@ -193,4 +193,22 @@ namespace improcessing {
      * @param k Number of colors
      */
     auto ColorQuantizationKMeans(Image &img, int k) -> std::expected<void, boost::system::error_code>;
+
+    struct SceneObject {
+        Point3 center;
+        Point3 size;
+        Point3 rotation_axis;
+        double rotation_angle;
+        std::vector<Pixel> face_colors;
+    };
+
+    enum class PerspectiveType {
+        kTwoPoint,
+        kThreePoint
+    };
+
+    auto RenderLab5Scene(Image &img,
+                         const SceneObject &obj1, PerspectiveType type1,
+                         const SceneObject &obj2, PerspectiveType type2,
+                         double k) -> void;
 } // namespace improcessing

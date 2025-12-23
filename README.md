@@ -212,6 +212,8 @@ Print lab1 blend:
 
 ![example_lab3_lines](./assets/lab3_thick_lines.png)
 
+![example_lab3_lines](./assets/lab3_thick_lines_demo.png)
+
 ### Laboratory 4
 
 #### Output images
@@ -227,6 +229,12 @@ Print lab1 blend:
 ![example_lab4_cyrus_beck](./assets/lab4_cyrus_beck.png)
 
 ![example_lab4_sutherland_hondgman](./assets/lab4_sutherland_hodgman.png)
+
+![example_lab4_complex_convex_clipping](./assets/lab4_complex_convex_clipping.png)
+
+![example_lab4_edge_alignment](./assets/lab4_edge_alignment_test.png)
+
+![example_lab4_star_sutherland_hodgman](./assets/lab4_star_sutherland_hodgman.png)
 
 #### Bezier curves
 
@@ -320,6 +328,45 @@ Print lab1 blend:
 ![example_lab5_parallepiped](./assets/animation/lab5_perspective_034.png)
 ![example_lab5_parallepiped](./assets/animation/lab5_perspective_035.png)
 
+##### Two
+
+![example_lab5_two](./assets/animation/two/lab5_000.png)
+![example_lab5_two](./assets/animation/two/lab5_001.png)
+![example_lab5_two](./assets/animation/two/lab5_002.png)
+![example_lab5_two](./assets/animation/two/lab5_003.png)
+![example_lab5_two](./assets/animation/two/lab5_004.png)
+![example_lab5_two](./assets/animation/two/lab5_005.png)
+![example_lab5_two](./assets/animation/two/lab5_006.png)
+![example_lab5_two](./assets/animation/two/lab5_007.png)
+![example_lab5_two](./assets/animation/two/lab5_008.png)
+![example_lab5_two](./assets/animation/two/lab5_009.png)
+![example_lab5_two](./assets/animation/two/lab5_010.png)
+![example_lab5_two](./assets/animation/two/lab5_011.png)
+![example_lab5_two](./assets/animation/two/lab5_012.png)
+![example_lab5_two](./assets/animation/two/lab5_013.png)
+![example_lab5_two](./assets/animation/two/lab5_014.png)
+![example_lab5_two](./assets/animation/two/lab5_015.png)
+![example_lab5_two](./assets/animation/two/lab5_016.png)
+![example_lab5_two](./assets/animation/two/lab5_017.png)
+![example_lab5_two](./assets/animation/two/lab5_018.png)
+![example_lab5_two](./assets/animation/two/lab5_019.png)
+![example_lab5_two](./assets/animation/two/lab5_020.png)
+![example_lab5_two](./assets/animation/two/lab5_021.png)
+![example_lab5_two](./assets/animation/two/lab5_022.png)
+![example_lab5_two](./assets/animation/two/lab5_023.png)
+![example_lab5_two](./assets/animation/two/lab5_024.png)
+![example_lab5_two](./assets/animation/two/lab5_025.png)
+![example_lab5_two](./assets/animation/two/lab5_026.png)
+![example_lab5_two](./assets/animation/two/lab5_027.png)
+![example_lab5_two](./assets/animation/two/lab5_028.png)
+![example_lab5_two](./assets/animation/two/lab5_029.png)
+![example_lab5_two](./assets/animation/two/lab5_030.png)
+![example_lab5_two](./assets/animation/two/lab5_031.png)
+![example_lab5_two](./assets/animation/two/lab5_032.png)
+![example_lab5_two](./assets/animation/two/lab5_033.png)
+![example_lab5_two](./assets/animation/two/lab5_034.png)
+![example_lab5_two](./assets/animation/two/lab5_035.png)
+
 ### Homework 1
 
 #### Output images
@@ -333,6 +380,14 @@ Result
 ![example_hw1](./assets/hw1.png)
 
 ![example_hw1](./assets/hw1_complex_star.png)
+
+![example_hw1](./assets/hw1_complex_star%20(copy).png)
+
+![example_hw1](./assets/hw1_bowtie.png)
+
+![example_hw1](./assets/hw1_star_silhouette.png)
+
+![example_hw1](./assets/hw1_overlap_mesh.png)
 
 ### Homework 2
 

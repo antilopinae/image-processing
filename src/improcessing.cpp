@@ -320,15 +320,43 @@ namespace improcessing {
         return {};
     }
 
-    auto DrawThickLine(Image &img, Point2D s, Point2D e, double t, Pixel color, LineCap cap) -> void {
-        Point start(s.x, s.y), end(e.x, e.y);
-        auto dir = (end - start).Normalized();
-        Point normal{-dir.y, dir.x};
-        auto r = t / 2.0;
+    static void FillCircle(Image &img, Point center, double radius, Pixel color) {
+        int r = static_cast<int>(std::ceil(radius));
+        int cx = static_cast<int>(center.x);
+        int cy = static_cast<int>(center.y);
 
-        std::vector<Point2D> box;
-        auto p1 = start + normal * r, p2 = end + normal * r;
-        auto p3 = end - normal * r, p4 = start - normal * r;
+        for (int y = -r; y <= r; ++y) {
+            for (int x = -r; x <= r; ++x) {
+                if (x * x + y * y <= radius * radius) {
+                    int px = cx + x;
+                    int py = cy + y;
+                    if (px >= 0 && px < (int) img.WidthRgb() && py >= 0 && py < (int) img.HeightRgb()) {
+                        img.GetRGBPixel(px, py) = color;
+                    }
+                }
+            }
+        }
+    }
+
+    void DrawThickLine(Image &img, Point2D start2d, Point2D end2d, double thickness,
+                       Pixel color, LineCap cap) {
+        Point A(static_cast<double>(start2d.x), static_cast<double>(start2d.y));
+        Point B(static_cast<double>(end2d.x), static_cast<double>(end2d.y));
+
+        if (A.Equal(B)) {
+            if (cap == LineCap::kRound) FillCircle(img, A, thickness / 2.0, color);
+            else img.GetRGBPixel(start2d.x, start2d.y) = color;
+            return;
+        }
+
+        Point dir = (B - A).Normalized();
+        Point norm(-dir.y, dir.x);
+        double r = thickness / 2.0;
+
+        Point p1 = A + norm * r;
+        Point p2 = B + norm * r;
+        Point p3 = B - norm * r;
+        Point p4 = A - norm * r;
 
         if (cap == LineCap::kSquare) {
             p1 = p1 - dir * r;
@@ -337,24 +365,12 @@ namespace improcessing {
             p3 = p3 + dir * r;
         }
 
-        box = {p1.ToPoint2D(), p2.ToPoint2D(), p3.ToPoint2D(), p4.ToPoint2D()};
+        std::vector<Point2D> box = {p1.ToPoint2D(), p2.ToPoint2D(), p3.ToPoint2D(), p4.ToPoint2D()};
         FillPolygonNonZero(img, box, color);
 
         if (cap == LineCap::kRound) {
-            auto draw_circle = [&](Point center) {
-                for (int dy = -r; dy <= r; ++dy) {
-                    for (int dx = -r; dx <= r; ++dx) {
-                        if (dx * dx + dy * dy <= r * r) {
-                            int px = center.x + dx, py = center.y + dy;
-                            if (px >= 0 && px < img.WidthRgb() && py >= 0 && py < img.HeightRgb())
-                                img.GetRGBPixel(px, py) = color;
-                        }
-                    }
-                }
-            };
-
-            draw_circle(start);
-            draw_circle(end);
+            FillCircle(img, A, r, color);
+            FillCircle(img, B, r, color);
         }
     }
 
@@ -541,13 +557,96 @@ namespace improcessing {
         }
     }
 
-    auto CyrusBeckClipSegment(Point &p0, Point &p1, const std::vector<Point> &clipPoly) -> bool {
-        if (clipPoly.size() < 3) return false;
+    static double getPolygonArea(const std::vector<Point> &polygon) {
+        double area = 0.0;
+        for (size_t i = 0; i < polygon.size(); ++i) {
+            const Point &p1 = polygon[i];
+            const Point &p2 = polygon[(i + 1) % polygon.size()];
+            area += (p2.x - p1.x) * (p2.y + p1.y);
+        }
+        return area;
+    }
 
-        auto area = 0.0;
-        for (size_t i = 0; i < clipPoly.size(); ++i)
-            area += clipPoly[i].Cross(clipPoly[(i + 1) % clipPoly.size()]);
-        if (std::abs(area) < 1e-9) return false;
+    static bool isOnSegment(Point a, Point b, Point p) {
+        double cross = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+        if (std::abs(cross) > Point::EPS) return false;
+
+        return p.x >= std::min(a.x, b.x) - Point::EPS && p.x <= std::max(a.x, b.x) + Point::EPS &&
+               p.y >= std::min(a.y, b.y) - Point::EPS && p.y <= std::max(a.y, b.y) + Point::EPS;
+    }
+
+    static bool intersectSegments(Point &p1, Point &p2, Point v1, Point v2) {
+        Point dP = p2 - p1;
+        Point dV = v2 - v1;
+
+        double det = dP.x * dV.y - dP.y * dV.x;
+
+        if (std::abs(det) > 1e-9) {
+            double t = ((v1.x - p1.x) * dV.y - (v1.y - p1.y) * dV.x) / det;
+            double u = ((v1.x - p1.x) * dP.y - (v1.y - p1.y) * dP.x) / det;
+
+            if (t >= -1e-9 && t <= 1.000000001 && u >= -1e-9 && u <= 1.000000001) {
+                p1 = p1 + dP * t;
+                p2 = p1;
+                return true;
+            }
+        } else {
+            if (std::abs((v1.x - p1.x) * dP.y - (v1.y - p1.y) * dP.x) > 1e-9) return false;
+
+            auto clip1D = [](double minP, double maxP, double minV, double maxV, double &resMin, double &resMax) {
+                resMin = std::max(minP, minV);
+                resMax = std::min(maxP, maxV);
+                return resMin <= resMax + 1e-9;
+            };
+
+            double interMinX, interMaxX, interMinY, interMaxY;
+            bool intersect = clip1D(std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(v1.x, v2.x),
+                                    std::max(v1.x, v2.x), interMinX, interMaxX) &&
+                             clip1D(std::min(p1.y, p2.y), std::max(p1.y, p2.y), std::min(v1.y, v2.y),
+                                    std::max(v1.y, v2.y), interMinY, interMaxY);
+
+            if (intersect) {
+                Point start = p1, end = p2;
+                double tStart = (std::abs(dP.x) > std::abs(dP.y))
+                                    ? (interMinX - start.x) / dP.x
+                                    : (interMinY - start.y) / dP.y;
+                double tEnd = (std::abs(dP.x) > std::abs(dP.y))
+                                  ? (interMaxX - start.x) / dP.x
+                                  : (interMaxY - start.y) / dP.y;
+
+                p1 = start + dP * std::clamp(std::min(tStart, tEnd), 0.0, 1.0);
+                p2 = start + dP * std::clamp(std::max(tStart, tEnd), 0.0, 1.0);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    auto CyrusBeckClipSegment(Point &p0, Point &p1, const std::vector<Point> &clipPoly) -> bool {
+        int n = static_cast<int>(clipPoly.size());
+        if (n == 0) return false;
+
+        double area = getPolygonArea(clipPoly);
+
+        if (std::abs(area) < 1e-9) {
+            Point polyMin = clipPoly[0];
+            Point polyMax = clipPoly[0];
+
+            for (const auto &pt: clipPoly) {
+                if (pt.x < polyMin.x || (pt.x == polyMin.x && pt.y < polyMin.y)) polyMin = pt;
+                if (pt.x > polyMax.x || (pt.x == polyMax.x && pt.y > polyMax.y)) polyMax = pt;
+            }
+
+            if (polyMin.Equal(polyMax)) {
+                if (isOnSegment(p0, p1, polyMin)) {
+                    p0 = p1 = polyMin;
+                    return true;
+                }
+                return false;
+            }
+
+            return intersectSegments(p0, p1, polyMin, polyMax);
+        }
 
         Point center{0, 0};
         for (const auto &p: clipPoly) center = center + p;
@@ -976,5 +1075,100 @@ namespace improcessing {
         }
 
         return {};
+    }
+
+    static void FillTriangleZ(Image &img, std::vector<double> &zBuffer,
+                              Point3 p1, Point3 p2, Point3 p3, Pixel color) {
+        int min_y = std::max(0, (int) std::min({p1.y, p2.y, p3.y}));
+        int max_y = std::min((int) img.HeightRgb() - 1, (int) std::max({p1.y, p2.y, p3.y}));
+
+        for (int y = min_y; y <= max_y; ++y) {
+            std::vector<std::pair<double, double> > intercepts;
+            auto check = [&](Point3 a, Point3 b) {
+                if ((a.y <= y && b.y > y) || (b.y <= y && a.y > y)) {
+                    double t = (y - a.y) / (b.y - a.y);
+                    double x = a.x + t * (b.x - a.x);
+                    double z = a.z + t * (b.z - a.z);
+                    intercepts.push_back({x, z});
+                }
+            };
+            check(p1, p2);
+            check(p2, p3);
+            check(p3, p1);
+            if (intercepts.size() < 2) continue;
+            if (intercepts[0].first > intercepts[1].first) std::swap(intercepts[0], intercepts[1]);
+
+            int start_x = std::max(0, (int) std::ceil(intercepts[0].first));
+            int end_x = std::min((int) img.WidthRgb() - 1, (int) std::floor(intercepts[1].first));
+
+            for (int x = start_x; x <= end_x; ++x) {
+                double t = (intercepts[1].first == intercepts[0].first)
+                               ? 0
+                               : (double) (x - intercepts[0].first) / (intercepts[1].first - intercepts[0].first);
+                double z = intercepts[0].second + t * (intercepts[1].second - intercepts[0].second);
+
+                int idx = y * img.WidthRgb() + x;
+                if (z < zBuffer[idx]) {
+                    zBuffer[idx] = z;
+                    img.GetRGBPixel(x, y) = color;
+                }
+            }
+        }
+    }
+
+    static Point3 ProjectPointLab5(Point3 p, PerspectiveType type, double k, double cx, double cy) {
+        double x_proj, y_proj, z_final;
+
+        if (type == PerspectiveType::kTwoPoint) {
+            double factor = k / (k + p.z);
+            x_proj = p.x * factor;
+            y_proj = p.y * factor;
+            z_final = p.z;
+        } else {
+            double factor = k / (k + p.z + p.y * 0.2);
+            x_proj = p.x * factor;
+            y_proj = p.y * factor;
+            z_final = p.z;
+        }
+        return {cx + x_proj, cy - y_proj, z_final};
+    }
+
+    auto RenderLab5Scene(Image &img,
+                         const SceneObject &obj1, PerspectiveType type1,
+                         const SceneObject &obj2, PerspectiveType type2,
+                         double k) -> void {
+        size_t w = img.WidthRgb();
+        size_t h = img.HeightRgb();
+        std::vector<double> zBuffer(w * h, std::numeric_limits<double>::max());
+
+        auto renderCuboid = [&](const SceneObject &obj, PerspectiveType pType) {
+            double hw = obj.size.x / 2, hh = obj.size.y / 2, hd = obj.size.z / 2;
+            std::vector<Point3> verts = {
+                {-hw, -hh, hd}, {hw, -hh, hd}, {hw, hh, hd}, {-hw, hh, hd},
+                {-hw, -hh, -hd}, {hw, -hh, -hd}, {hw, hh, -hd}, {-hw, hh, -hd}
+            };
+
+            Matrix4x4 rot = Matrix4x4::Rotation(obj.rotation_axis, obj.rotation_angle);
+            std::vector<Point3> projected;
+            for (auto &v: verts) {
+                Point3 p = rot.Transform(v) + obj.center;
+                projected.push_back(ProjectPointLab5(p, pType, k, w / 2.0, h / 2.0));
+            }
+
+            std::vector<std::vector<int> > faces = {
+                {0, 1, 2, 3}, {1, 5, 6, 2}, {5, 4, 7, 6}, {4, 0, 3, 7}, {3, 2, 6, 7}, {4, 5, 1, 0}
+            };
+
+            for (size_t i = 0; i < faces.size(); ++i) {
+                Pixel color = obj.face_colors[i % obj.face_colors.size()];
+                FillTriangleZ(img, zBuffer, projected[faces[i][0]], projected[faces[i][1]], projected[faces[i][2]],
+                              color);
+                FillTriangleZ(img, zBuffer, projected[faces[i][0]], projected[faces[i][2]], projected[faces[i][3]],
+                              color);
+            }
+        };
+
+        renderCuboid(obj1, type1);
+        renderCuboid(obj2, type2);
     }
 } // namespace improcessing
