@@ -60,6 +60,15 @@ namespace improcessing {
     auto DrawLine(Image &img, Point2D start, Point2D end,
                   Pixel color) -> std::expected<void, boost::system::error_code>;
 
+    /**
+    * @brief Fills the circle with the specified color
+    * @param img Drawing image
+    * @param center Coordinates of the center (Point)
+    * @param radius Radius
+    * @param color Pixel color
+    */
+    auto FillCircle(Image &img, Point center, double radius, Pixel color) -> void;
+
     enum class LineCap {
         kButt, kSquare, kRound
     };

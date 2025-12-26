@@ -10,6 +10,34 @@ namespace improcessing {
             return res;
         }
 
+        static Matrix4x4 Translation(double tx, double ty, double tz) {
+            Matrix4x4 res = Identity();
+            res.m[0][3] = tx;
+            res.m[1][3] = ty;
+            res.m[2][3] = tz;
+            return res;
+        }
+
+        static Matrix4x4 RotationY(double angle) {
+            Matrix4x4 res = Identity();
+            double c = std::cos(angle), s = std::sin(angle);
+            res.m[0][0] = c;
+            res.m[0][2] = s;
+            res.m[2][0] = -s;
+            res.m[2][2] = c;
+            return res;
+        }
+
+        static Matrix4x4 RotationX(double angle) {
+            Matrix4x4 res = Identity();
+            double c = std::cos(angle), s = std::sin(angle);
+            res.m[1][1] = c;
+            res.m[1][2] = -s;
+            res.m[2][1] = s;
+            res.m[2][2] = c;
+            return res;
+        }
+
         static Matrix4x4 Rotation(Point3 axis, double angle) {
             axis = axis.Normalized();
             double c = std::cos(angle), s = std::sin(angle), t = 1.0 - c;
@@ -23,6 +51,15 @@ namespace improcessing {
             res.m[2][0] = t * axis.x * axis.z - s * axis.y;
             res.m[2][1] = t * axis.y * axis.z + s * axis.x;
             res.m[2][2] = t * axis.z * axis.z + c;
+            return res;
+        }
+
+        Matrix4x4 operator*(const Matrix4x4 &o) const {
+            Matrix4x4 res;
+            for (int i = 0; i < 4; i++)
+                for (int j = 0; j < 4; j++)
+                    for (int k = 0; k < 4; k++)
+                        res.m[i][j] += m[i][k] * o.m[k][j];
             return res;
         }
 

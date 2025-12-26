@@ -320,7 +320,7 @@ namespace improcessing {
         return {};
     }
 
-    static void FillCircle(Image &img, Point center, double radius, Pixel color) {
+    auto FillCircle(Image &img, Point center, double radius, Pixel color) -> void {
         int r = static_cast<int>(std::ceil(radius));
         int cx = static_cast<int>(center.x);
         int cy = static_cast<int>(center.y);
@@ -445,21 +445,8 @@ namespace improcessing {
         return true;
     }
 
-    static auto is_degenerate(const std::vector<Point2D> &poly) -> bool {
-        if (poly.size() < 3) return true;
-
-        auto area = 0.0;
-        for (auto i = 0; i < poly.size(); ++i) {
-            area += (double) poly[i].x * poly[(i + 1) % poly.size()].y;
-            area -= (double) poly[i].y * poly[(i + 1) % poly.size()].x;
-        }
-
-        return std::abs(area) < 1e-6;
-    }
-
     auto FillPolygonEvenOdd(Image &img, const std::vector<Point2D> &vertices, Pixel color) -> void {
         if (vertices.size() < 3) return;
-        if (is_degenerate(vertices)) return;
 
         int min_y = img.HeightRgb(), max_y = 0;
         for (const auto &p: vertices) {
@@ -714,6 +701,33 @@ namespace improcessing {
             area += clipPoly[i].x * clipPoly[(i + 1) % clipPoly.size()].y;
             area -= clipPoly[i].y * clipPoly[(i + 1) % clipPoly.size()].x;
         }
+
+        if (std::abs(area) < 1e-9) {
+            auto pMin = clipPoly[0], pMax = clipPoly[0];
+            for (const auto &p: clipPoly) {
+                if (p.x < pMin.x || (p.x == pMin.x && p.y < pMin.y)) pMin = p;
+                if (p.x > pMax.x || (p.x == pMax.x && p.y > pMax.y)) pMax = p;
+            }
+
+            std::vector<Point> result;
+            if (pMin.Equal(pMax)) return result;
+
+            for (size_t i = 0; i < subjectPoly.size(); ++i) {
+                Point a = subjectPoly[i];
+                Point b = subjectPoly[(i + 1) % subjectPoly.size()];
+                Point start = a, end = b;
+                if (intersectSegments(start, end, pMin, pMax)) {
+                    result.push_back(start);
+                    if (!start.Equal(end)) {
+                        result.push_back(end);
+                    }
+                }
+            }
+            result.erase(std::unique(result.begin(), result.end(),
+                                     [](const Point &a, const Point &b) { return a.Equal(b); }), result.end());
+            return result;
+        }
+
         auto is_ccw = (area > 0);
 
         auto output = subjectPoly;
@@ -1077,94 +1091,101 @@ namespace improcessing {
         return {};
     }
 
+    static Point3 Barycentric(Point p, Point a, Point b, Point c) {
+        auto u = Point3(c.x - a.x, b.x - a.x, a.x - p.x).Cross(Point3(c.y - a.y, b.y - a.y, a.y - p.y));
+        if (std::abs(u.z) < 1e-2) return {-1, 1, 1};
+        return {1.0f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z};
+    }
+
     static void FillTriangleZ(Image &img, std::vector<double> &zBuffer,
                               Point3 p1, Point3 p2, Point3 p3, Pixel color) {
-        int min_y = std::max(0, (int) std::min({p1.y, p2.y, p3.y}));
-        int max_y = std::min((int) img.HeightRgb() - 1, (int) std::max({p1.y, p2.y, p3.y}));
+        auto min_x = std::max(0, static_cast<int>(std::floor(std::min({p1.x, p2.x, p3.x}))));
+        auto max_x = std::min(static_cast<int>(img.WidthRgb()) - 1, (int) std::ceil(std::max({p1.x, p2.x, p3.x})));
+        auto min_y = std::max(0, static_cast<int>(std::floor(std::min({p1.y, p2.y, p3.y}))));
+        auto max_y = std::min(static_cast<int>(img.HeightRgb()) - 1,
+                              static_cast<int>(std::ceil(std::max({p1.y, p2.y, p3.y}))));
 
-        for (int y = min_y; y <= max_y; ++y) {
-            std::vector<std::pair<double, double> > intercepts;
-            auto check = [&](Point3 a, Point3 b) {
-                if ((a.y <= y && b.y > y) || (b.y <= y && a.y > y)) {
-                    double t = (y - a.y) / (b.y - a.y);
-                    double x = a.x + t * (b.x - a.x);
-                    double z = a.z + t * (b.z - a.z);
-                    intercepts.push_back({x, z});
-                }
-            };
-            check(p1, p2);
-            check(p2, p3);
-            check(p3, p1);
-            if (intercepts.size() < 2) continue;
-            if (intercepts[0].first > intercepts[1].first) std::swap(intercepts[0], intercepts[1]);
+        for (auto y = min_y; y <= max_y; y++) {
+            for (auto x = min_x; x <= max_x; x++) {
+                auto bc = Barycentric(Point(x, y), Point(p1.x, p1.y), Point(p2.x, p2.y), Point(p3.x, p3.y));
 
-            int start_x = std::max(0, (int) std::ceil(intercepts[0].first));
-            int end_x = std::min((int) img.WidthRgb() - 1, (int) std::floor(intercepts[1].first));
+                if (bc.x >= 0 && bc.y >= 0 && bc.z >= 0) {
+                    auto z = p1.z * bc.x + p2.z * bc.y + p3.z * bc.z;
+                    auto idx = y * img.WidthRgb() + x;
 
-            for (int x = start_x; x <= end_x; ++x) {
-                double t = (intercepts[1].first == intercepts[0].first)
-                               ? 0
-                               : (double) (x - intercepts[0].first) / (intercepts[1].first - intercepts[0].first);
-                double z = intercepts[0].second + t * (intercepts[1].second - intercepts[0].second);
-
-                int idx = y * img.WidthRgb() + x;
-                if (z < zBuffer[idx]) {
-                    zBuffer[idx] = z;
-                    img.GetRGBPixel(x, y) = color;
+                    if (z < zBuffer[idx]) {
+                        zBuffer[idx] = z;
+                        img.GetRGBPixel(x, y) = color;
+                    }
                 }
             }
         }
     }
 
-    static Point3 ProjectPointLab5(Point3 p, PerspectiveType type, double k, double cx, double cy) {
-        double x_proj, y_proj, z_final;
+    static Matrix4x4 GetProjectionMatrix(PerspectiveType type, double k) {
+        auto proj = Matrix4x4::Identity();
+        proj.m[3][2] = -1.0 / k;
 
         if (type == PerspectiveType::kTwoPoint) {
-            double factor = k / (k + p.z);
-            x_proj = p.x * factor;
-            y_proj = p.y * factor;
-            z_final = p.z;
+            return Matrix4x4::RotationY(M_PI / 6.0) * proj;
         } else {
-            double factor = k / (k + p.z + p.y * 0.2);
-            x_proj = p.x * factor;
-            y_proj = p.y * factor;
-            z_final = p.z;
+            return Matrix4x4::RotationX(M_PI / 8.0) * Matrix4x4::RotationY(M_PI / 6.0) * proj;
         }
-        return {cx + x_proj, cy - y_proj, z_final};
     }
 
     auto RenderLab5Scene(Image &img,
                          const SceneObject &obj1, PerspectiveType type1,
                          const SceneObject &obj2, PerspectiveType type2,
                          double k) -> void {
-        size_t w = img.WidthRgb();
-        size_t h = img.HeightRgb();
-        std::vector<double> zBuffer(w * h, std::numeric_limits<double>::max());
+        auto width = img.WidthRgb();
+        auto height = img.HeightRgb();
+        std::vector<double> zBuffer(width * height, 1e15);
 
         auto renderCuboid = [&](const SceneObject &obj, PerspectiveType pType) {
-            double hw = obj.size.x / 2, hh = obj.size.y / 2, hd = obj.size.z / 2;
-            std::vector<Point3> verts = {
+            auto hw = obj.size.x / 2, hh = obj.size.y / 2, hd = obj.size.z / 2;
+            std::vector<Point3> local_verts = {
                 {-hw, -hh, hd}, {hw, -hh, hd}, {hw, hh, hd}, {-hw, hh, hd},
                 {-hw, -hh, -hd}, {hw, -hh, -hd}, {hw, hh, -hd}, {-hw, hh, -hd}
             };
 
-            Matrix4x4 rot = Matrix4x4::Rotation(obj.rotation_axis, obj.rotation_angle);
-            std::vector<Point3> projected;
-            for (auto &v: verts) {
-                Point3 p = rot.Transform(v) + obj.center;
-                projected.push_back(ProjectPointLab5(p, pType, k, w / 2.0, h / 2.0));
-            }
+            auto model = Matrix4x4::Translation(obj.center.x, obj.center.y, obj.center.z) *
+                         Matrix4x4::Rotation(obj.rotation_axis, obj.rotation_angle);
+
+            auto projection = GetProjectionMatrix(pType, k);
+
+            std::vector<Point3> world_verts;
+            for (auto &v: local_verts) world_verts.push_back(model.Transform(v));
 
             std::vector<std::vector<int> > faces = {
                 {0, 1, 2, 3}, {1, 5, 6, 2}, {5, 4, 7, 6}, {4, 0, 3, 7}, {3, 2, 6, 7}, {4, 5, 1, 0}
             };
 
-            for (size_t i = 0; i < faces.size(); ++i) {
-                Pixel color = obj.face_colors[i % obj.face_colors.size()];
-                FillTriangleZ(img, zBuffer, projected[faces[i][0]], projected[faces[i][1]], projected[faces[i][2]],
-                              color);
-                FillTriangleZ(img, zBuffer, projected[faces[i][0]], projected[faces[i][2]], projected[faces[i][3]],
-                              color);
+            for (auto i = 0u; i < faces.size(); ++i) {
+                const auto &f = faces[i];
+
+                auto behind_camera = false;
+                for (auto idx: f) {
+                    if (world_verts[idx].z > k - 20.0) {
+                        behind_camera = true;
+                        break;
+                    }
+                }
+                if (behind_camera) continue;
+
+                std::vector<Point3> proj_face;
+                for (auto idx: f) {
+                    auto p = projection.Transform(world_verts[idx]);
+                    proj_face.push_back({(width / 2.0) + p.x, (height / 2.0) - p.y, p.z});
+                }
+
+                auto area = (proj_face[1].x - proj_face[0].x) * (proj_face[2].y - proj_face[0].y) -
+                            (proj_face[1].y - proj_face[0].y) * (proj_face[2].x - proj_face[0].x);
+
+                if (area > 0) continue;
+
+                auto color = obj.face_colors[i % obj.face_colors.size()];
+                FillTriangleZ(img, zBuffer, proj_face[0], proj_face[1], proj_face[2], color);
+                FillTriangleZ(img, zBuffer, proj_face[0], proj_face[2], proj_face[3], color);
             }
         };
 

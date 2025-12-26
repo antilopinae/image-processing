@@ -214,6 +214,8 @@ Print lab1 blend:
 
 ![example_lab3_lines](./assets/lab3_thick_lines_demo.png)
 
+![example_lab3_polygon_even_odd_degenerate](./assets/lab3_degenerate_fill.png)
+
 ### Laboratory 4
 
 #### Output images
@@ -235,6 +237,10 @@ Print lab1 blend:
 ![example_lab4_edge_alignment](./assets/lab4_edge_alignment_test.png)
 
 ![example_lab4_star_sutherland_hodgman](./assets/lab4_star_sutherland_hodgman.png)
+
+![example_lab4_sh_degenerate_clip](./assets/lab4_sh_degenerate_clip.png)
+
+![example_lab4_cyrus_beck_clip_segment](./assets/lab4_cb_vertex_and_collinear.png)
 
 #### Bezier curves
 

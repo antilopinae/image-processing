@@ -403,6 +403,16 @@ int main(int argc, char *argv[]) {
                 DrawLine(img, {50, 150}, {550, 150}, {0, 0, 0});
             }, 600, 600);
 
+            res = DoSmthWithImage("lab3_degenerate_fill.png", [](Image &img) {
+                img.ResizeRgb(400, 200);
+                std::vector<Point2D> degeneratePoly = {{50, 100}, {350, 100}, {200, 100}};
+                FillPolygonEvenOdd(img, degeneratePoly, {255, 50, 50});
+            }, 400, 200);
+
+            if (!res) {
+                return std::unexpected{res.error()};
+            }
+
             return {};
         },
         [](const Laboratory4 &c) -> std::expected<void, boost::system::error_code> {
@@ -717,6 +727,47 @@ int main(int argc, char *argv[]) {
                 }
             }, 400, 400);
 
+            res = DoSmthWithImage("lab4_cb_vertex_and_collinear.png", [](Image &img) {
+                img.ResizeRgb(400, 400);
+                std::vector<Point> clip = {{100, 100}, {300, 100}, {300, 300}, {100, 300}};
+
+                std::vector<std::pair<Point, Point> > lines = {
+                    {{50, 50}, {150, 150}},
+                    {{100, 50}, {100, 350}},
+                    {{150, 100}, {250, 100}}
+                };
+
+                std::vector<Point2D> clip2d = {{100, 100}, {300, 100}, {300, 300}, {100, 300}};
+                DrawPolygonEdges(img, clip2d, {255, 255, 0});
+
+                for (auto [p0, p1]: lines) {
+                    DrawLine(img, p0.ToPoint2D(), p1.ToPoint2D(), {50, 50, 50});
+                    Point a = p0, b = p1;
+                    if (CyrusBeckClipSegment(a, b, clip)) {
+                        DrawLine(img, a.ToPoint2D(), b.ToPoint2D(), {255, 0, 0});
+                    }
+                }
+            }, 400, 400);
+
+            res = DoSmthWithImage("lab4_sh_degenerate_clip.png", [](Image &img) {
+                img.ResizeRgb(400, 400);
+                std::vector<Point> subject = {{100, 100}, {300, 100}, {300, 300}, {100, 300}};
+                std::vector<Point> degenerateClip = {{50, 200}, {350, 200}, {200, 200}};
+
+                auto result = ClipPolygonSutherlandHodgman(subject, degenerateClip);
+
+                std::vector<Point2D> sub2d;
+                for (auto &p: subject) sub2d.push_back(p.ToPoint2D());
+                DrawPolygonEdges(img, sub2d, {100, 100, 100});
+
+                for (const auto &p: result) {
+                    FillCircle(img, p, 3, {255, 0, 0});
+                }
+                if (result.size() >= 2) {
+                    DrawLine(img, result[0].ToPoint2D(), result[1].ToPoint2D(), {255, 0, 0});
+                }
+            }, 400, 400);
+
             return {};
         },
         [](const Laboratory5 &c) -> std::expected<void, boost::system::error_code> {
@@ -748,36 +799,32 @@ int main(int argc, char *argv[]) {
 
             for (int i = 0; i < c.frames; ++i) {
                 double t = (2.0 * M_PI * i) / c.frames;
-
-                double radius = 150.0;
-                Point3 pos1(radius * cos(t), 0, radius * sin(t));
-                Point3 pos2(radius * cos(t + M_PI), 0, radius * sin(t + M_PI));
+                double orbit_radius = 180.0;
 
                 SceneObject cuboid1{
-                    .center = pos1,
-                    .size = {60, 60, 60},
+                    .center = {orbit_radius * std::cos(t), 0, orbit_radius * std::sin(t)},
+                    .size = {80, 80, 80},
                     .rotation_axis = {0, 1, 0},
-                    .rotation_angle = t * 2,
+                    .rotation_angle = t * 2.0,
                     .face_colors = {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0}, {255, 0, 255}, {0, 255, 255}}
                 };
 
                 SceneObject cuboid2{
-                    .center = pos2,
-                    .size = {80, 40, 50},
+                    .center = {orbit_radius * std::cos(t + M_PI), 40 * std::sin(t), orbit_radius * std::sin(t + M_PI)},
+                    .size = {100, 60, 70},
                     .rotation_axis = {1, 1, 0},
                     .rotation_angle = -t * 1.5,
-                    .face_colors = {{128, 0, 0}, {0, 128, 0}, {0, 0, 128}, {128, 128, 0}, {128, 0, 128}, {0, 128, 128}}
+                    .face_colors = {
+                        {128, 50, 0}, {50, 128, 0}, {0, 50, 128}, {100, 100, 0}, {100, 0, 100}, {0, 100, 100}
+                    }
                 };
 
                 auto fname = fmt::format("{}_{:03d}.png", c.output_prefix, i);
                 auto res = DoSmthWithImage(fname, [&](Image &img) {
-                    RenderLab5Scene(img,
-                                    cuboid1, PerspectiveType::kTwoPoint,
-                                    cuboid2, PerspectiveType::kThreePoint,
+                    img.ResizeRgb(600, 600);
+                    RenderLab5Scene(img, cuboid1, PerspectiveType::kTwoPoint, cuboid2, PerspectiveType::kThreePoint,
                                     c.k);
                 }, 600, 600);
-
-                if (!res) return std::unexpected{res.error()};
             }
 
             return {};
