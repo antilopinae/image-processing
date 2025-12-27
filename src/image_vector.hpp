@@ -304,11 +304,11 @@ namespace improcessing {
 
     template<typename T>
     std::ostream &operator<<(std::ostream &os, const ImVector<T> &vec) {
-        os << "ImVector [size=" << vec.size() << ", capacity=" << vec.capacity() << "] { ";
-        for (const auto &val: vec) {
-            os << val << " ";
-        }
-        os << "}";
+        // os << "ImVector [size=" << vec.size() << ", capacity=" << vec.capacity() << "] { ";
+        // for (const auto &val: vec) {
+        //     os << val << " ";
+        // }
+        // os << "}";
         return os;
     }
 }

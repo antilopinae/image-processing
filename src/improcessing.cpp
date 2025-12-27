@@ -446,7 +446,19 @@ namespace improcessing {
     }
 
     auto FillPolygonEvenOdd(Image &img, const std::vector<Point2D> &vertices, Pixel color) -> void {
-        if (vertices.size() < 3) return;
+        if (vertices.empty()) return;
+
+        if (vertices.size() == 1) {
+            if (vertices[0].x < img.WidthRgb() && vertices[0].y < img.HeightRgb()) {
+                img.GetRGBPixel(vertices[0].x, vertices[0].y) = color;
+            }
+            return;
+        }
+
+        if (vertices.size() == 2) {
+            std::ignore = DrawLine(img, vertices[0], vertices[1], color);
+            return;
+        }
 
         int min_y = img.HeightRgb(), max_y = 0;
         for (const auto &p: vertices) {
@@ -694,12 +706,45 @@ namespace improcessing {
 
     auto ClipPolygonSutherlandHodgman(const std::vector<Point> &subjectPoly,
                                       const std::vector<Point> &clipPoly) -> std::vector<Point> {
-        if (clipPoly.size() < 3 || subjectPoly.empty()) return subjectPoly;
 
-        auto area = 0.0;
-        for (size_t i = 0; i < clipPoly.size(); ++i) {
-            area += clipPoly[i].x * clipPoly[(i + 1) % clipPoly.size()].y;
-            area -= clipPoly[i].y * clipPoly[(i + 1) % clipPoly.size()].x;
+        double area = getPolygonArea(clipPoly);
+
+        if (clipPoly.size() < 3) {
+            auto pMin = clipPoly[0], pMax = clipPoly[0];
+            for (const auto &p : clipPoly) {
+                if (p.x < pMin.x || (p.x == pMin.x && p.y < pMin.y)) pMin = p;
+                if (p.x > pMax.x || (p.x == pMax.x && p.y > pMax.y)) pMax = p;
+            }
+
+            std::vector<Point> result;
+            if (pMin.Equal(pMax)) { //point
+                for (size_t i = 0; i < subjectPoly.size(); ++i) {
+                    if (isOnSegment(subjectPoly[i], subjectPoly[(i + 1) % subjectPoly.size()], pMin)) {
+                        result.push_back(pMin);
+                        break;
+                    }
+                }
+            } else { //line
+                for (auto i = 0u; i < subjectPoly.size(); ++i) {
+                    auto v1 = subjectPoly[i];
+                    auto v2 = subjectPoly[(i + 1) % subjectPoly.size()];
+
+                    auto p1 = pMin, p2 = pMax;
+                    if (intersectSegments(p1, p2, v1, v2)) {
+                        result.push_back(p1);
+                        if (!p1.Equal(p2)) result.push_back(p2);
+                    }
+                }
+
+                if (result.size() > 1) {
+                    std::sort(result.begin(), result.end(), [](const Point &a, const Point &b) {
+                        return (a.x != b.x) ? a.x < b.x : a.y < b.y;
+                    });
+                    result.erase(std::unique(result.begin(), result.end(),
+                                             [](const Point &a, const Point &b) { return a.Equal(b); }), result.end());
+                }
+            }
+            return result;
         }
 
         if (std::abs(area) < 1e-9) {

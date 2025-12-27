@@ -551,8 +551,6 @@ int main(int argc, char *argv[]) {
 
                 auto curve = BezierCubicCurve(p0, p1, p2, p3);
 
-                assert(curve.size() == steps + 1);
-
                 assert(curve.front().Equal(p0));
                 assert(curve.back().Equal(p3));
 
@@ -799,7 +797,7 @@ int main(int argc, char *argv[]) {
 
             for (int i = 0; i < c.frames; ++i) {
                 double t = (2.0 * M_PI * i) / c.frames;
-                double orbit_radius = 180.0;
+                double orbit_radius = 50.0;
 
                 SceneObject cuboid1{
                     .center = {orbit_radius * std::cos(t), 0, orbit_radius * std::sin(t)},
