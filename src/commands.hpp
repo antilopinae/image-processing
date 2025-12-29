@@ -31,11 +31,9 @@ struct Laboratory2 {
     const uint8_t n_levels;
 };
 
-struct Laboratory3 {
-};
+struct Laboratory3 {};
 
-struct Laboratory4 {
-};
+struct Laboratory4 {};
 
 struct Laboratory5 {
     const std::string &output_prefix;
@@ -60,5 +58,12 @@ struct Homework3 {
     int k_colors;
 };
 
-using Command = std::variant<Laboratory1GrayCircle, Laboratory1Blend, Laboratory2, Laboratory3, Laboratory4, Laboratory5
-    , Homework1, Homework2, Homework3>;
+using Command = std::variant<Laboratory1GrayCircle,
+                             Laboratory1Blend,
+                             Laboratory2,
+                             Laboratory3,
+                             Laboratory4,
+                             Laboratory5,
+                             Homework1,
+                             Homework2,
+                             Homework3>;
