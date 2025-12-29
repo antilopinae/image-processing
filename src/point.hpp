@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iomanip>
+#include <ostream>
 
 namespace improcessing {
 template<typename T>

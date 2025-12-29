@@ -218,7 +218,7 @@ struct SceneObject {
     Point3 size;
     Point3 rotation_axis;
     double rotation_angle;
-    std::vector<Pixel> face_colors;
+    Pixel color;
     PerspectiveType type;
 };
 

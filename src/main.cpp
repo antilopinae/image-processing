@@ -1014,8 +1014,8 @@ int main(int argc, char *argv[])
                     .size           = {80, 80, 80},
                     .rotation_axis  = {0, 1, 0},
                     .rotation_angle = t * 2.0,
-                    .face_colors = {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0}, {255, 0, 255}, {0, 255, 255}},
-                    .type        = PerspectiveType::kTwoPoint
+                    .color = Pixel({100, 40, 70}),
+                    .type        = PerspectiveType::kTwoPoint,
                 };
 
                 SceneObject cuboid2{
@@ -1023,9 +1023,8 @@ int main(int argc, char *argv[])
                     .size   = {100, 60, 70},
                     .rotation_axis  = {1, 1, 0},
                     .rotation_angle = -t * 1.5,
-                    .face_colors =
-                        {{128, 50, 0}, {50, 128, 0}, {0, 50, 128}, {100, 100, 0}, {100, 0, 100}, {0, 100, 100}},
-                    .type = PerspectiveType::kThreePoint
+                    .color = Pixel({125, 100, 0}),
+                    .type = PerspectiveType::kThreePoint,
                 };
 
                 auto fname = fmt::format("{}_{:03d}.png", c.output_prefix, i);
