@@ -3,13 +3,17 @@
 #include <filesystem>
 #include <iostream>
 
+#include "light.hpp"
 #include <commands.hpp>
+#include <cube.hpp>
 #include <image.hpp>
 #include <improcessing.hpp>
+#include <renderer.hpp>
 
 #include <argparse/argparse.hpp>
 #include <boost/system/error_code.hpp>
 #include <fmt/core.h>
+#include <scene_object.hpp>
 
 auto AddInputArgument(argparse::ArgumentParser &parser, std::string &input, const std::string &name = "--input") -> void
 {
@@ -1005,37 +1009,99 @@ int main(int argc, char *argv[])
                 }
             }
 
+            Camera cam;
+            cam.position     = {0, 0, -10};
+            cam.focal_length = 600.0;
+
+            Cube cube_model(1.0);
+            Renderer renderer;
+
+            double orbit_radius = 4.0;
+
             for (int i = 0; i < c.frames; ++i) {
-                double t            = (2.0 * M_PI * i) / c.frames;
-                double orbit_radius = 50.0;
+                double t = (2.0 * M_PI * i) / c.frames;
 
-                SceneObject cuboid1{
-                    .center         = {orbit_radius * std::cos(t), 0, orbit_radius * std::sin(t)},
-                    .size           = {80, 80, 80},
-                    .rotation_axis  = {0, 1, 0},
-                    .rotation_angle = t * 2.0,
-                    .color = Pixel({100, 40, 70}),
-                    .type        = PerspectiveType::kTwoPoint,
-                };
+                SceneObject cube1;
+                cube1.type  = PerspectiveType::kTwoPoint;
+                cube1.color = {255, 0, 0};
+                // x = R*cos(t), z = R*sin(t)
+                cube1.center   = {orbit_radius * std::cos(t), 0.0, orbit_radius * std::sin(t)};
+                cube1.rotation = {0.0, t * 2.0, 0.0};
 
-                SceneObject cuboid2{
-                    .center = {orbit_radius * std::cos(t + M_PI), 40 * std::sin(t), orbit_radius * std::sin(t + M_PI)},
-                    .size   = {100, 60, 70},
-                    .rotation_axis  = {1, 1, 0},
-                    .rotation_angle = -t * 1.5,
-                    .color = Pixel({125, 100, 0}),
-                    .type = PerspectiveType::kThreePoint,
-                };
+                SceneObject cube2;
+                cube2.type     = PerspectiveType::kThreePoint;
+                cube2.color    = {0, 255, 0};
+                cube2.center   = {orbit_radius * std::cos(t + M_PI), 0.0, orbit_radius * std::sin(t + M_PI)};
+                cube2.rotation = {t * 1.5, t * 0.5, 0.0};
+
+                std::vector<SceneObject *> objects = {&cube1, &cube2};
+                std::ranges::sort(objects, [](SceneObject *a, SceneObject *b) { return a->center.z > b->center.z; });
 
                 auto fname = fmt::format("{}_{:03d}.png", c.output_prefix, i);
                 auto res   = DoSmthWithImage(
                     fname,
                     [&](Image &img) {
-                        img.ResizeRgb(600, 600);
-                        RenderLab5Scene(img, cuboid1, cuboid2, c.k);
+                        for (auto *obj : objects) {
+                            renderer.Render(img, cube_model, *obj, cam);
+                        }
                     },
                     600,
                     600);
+
+                if (!res) {
+                    return std::unexpected{res.error()};
+                }
+            }
+
+            std::vector<Light> lights;
+            lights.push_back(Light{
+                {-10,  10,  -5},
+                0.1,
+                0.8,
+                0.5,
+                {255, 255, 255}
+            });
+            lights.push_back({
+                { 10,   5,  -5},
+                0.05,
+                1,
+                0.2,
+                {100, 100, 255}
+            });
+
+            for (int i = 0; i < c.frames; ++i) {
+                double t = (2.0 * M_PI * i) / c.frames;
+
+                SceneObject cube1;
+                cube1.type  = PerspectiveType::kTwoPoint;
+                cube1.color = {255, 0, 0};
+                // x = R*cos(t), z = R*sin(t)
+                cube1.center   = {orbit_radius * std::cos(t), 0.0, orbit_radius * std::sin(t)};
+                cube1.rotation = {0.0, t * 2.0, 0.0};
+
+                SceneObject cube2;
+                cube2.type     = PerspectiveType::kThreePoint;
+                cube2.color    = {0, 255, 0};
+                cube2.center   = {orbit_radius * std::cos(t + M_PI), 0.0, orbit_radius * std::sin(t + M_PI)};
+                cube2.rotation = {t * 1.5, t * 0.5, 0.0};
+
+                std::vector<SceneObject *> objects = {&cube1, &cube2};
+                std::ranges::sort(objects, [](SceneObject *a, SceneObject *b) { return a->center.z > b->center.z; });
+
+                auto fname = fmt::format("{}_two_lights_{:03d}.png", c.output_prefix, i);
+                auto res   = DoSmthWithImage(
+                    fname,
+                    [&](Image &img) {
+                        for (auto obj : objects) {
+                            renderer.Render(img, cube_model, *obj, cam, lights);
+                        }
+                    },
+                    600,
+                    600);
+
+                if (!res) {
+                    return std::unexpected{res.error()};
+                }
             }
 
             return {};

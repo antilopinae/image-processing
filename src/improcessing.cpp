@@ -1269,6 +1269,4 @@ auto ColorQuantizationKMeans(Image &img, int k) -> std::expected<void, boost::sy
 
     return {};
 }
-
-auto RenderLab5Scene(Image &img, const SceneObject &obj1, const SceneObject &obj2, double k) -> void {}
 } // namespace improcessing

@@ -85,5 +85,25 @@ struct Matrix4x4 {
         }
         return {x, y, z};
     }
+
+    static Matrix4x4 Scaling(double sx, double sy, double sz)
+    {
+        Matrix4x4 res = Identity();
+        res.m[0][0]   = sx;
+        res.m[1][1]   = sy;
+        res.m[2][2]   = sz;
+        return res;
+    }
+
+    static Matrix4x4 RotationZ(double angle)
+    {
+        Matrix4x4 res = Identity();
+        double c = std::cos(angle), s = std::sin(angle);
+        res.m[0][0] = c;
+        res.m[0][1] = -s;
+        res.m[1][0] = s;
+        res.m[1][1] = c;
+        return res;
+    }
 };
 } // namespace improcessing

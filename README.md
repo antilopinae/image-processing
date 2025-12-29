@@ -373,6 +373,8 @@ Print lab1 blend:
 ![example_lab5_two](./assets/animation/two/lab5_034.png)
 ![example_lab5_two](./assets/animation/two/lab5_035.png)
 
+## Two with lights
+
 ### Homework 1
 
 #### Output images

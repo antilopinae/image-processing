@@ -207,20 +207,4 @@ auto MakeCircleArc(Point center, double radius, double angle_start_deg, double a
  * @param k Number of colors
  */
 auto ColorQuantizationKMeans(Image &img, int k) -> std::expected<void, boost::system::error_code>;
-
-enum class PerspectiveType {
-    kTwoPoint,
-    kThreePoint
-};
-
-struct SceneObject {
-    Point3 center;
-    Point3 size;
-    Point3 rotation_axis;
-    double rotation_angle;
-    Pixel color;
-    PerspectiveType type;
-};
-
-auto RenderLab5Scene(Image &img, const SceneObject &obj1, const SceneObject &obj2, double k) -> void;
 } // namespace improcessing
