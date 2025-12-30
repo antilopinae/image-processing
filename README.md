@@ -375,6 +375,43 @@ Print lab1 blend:
 
 ## Two with lights
 
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_000.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_001.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_002.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_003.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_004.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_005.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_006.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_007.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_008.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_009.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_010.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_011.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_012.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_013.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_014.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_015.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_016.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_017.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_018.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_019.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_020.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_021.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_022.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_023.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_024.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_025.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_026.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_027.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_028.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_029.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_030.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_031.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_032.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_033.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_034.png)
+![example_lab5_two](./assets/animation/two_lights/lab5_two_lights_035.png)
+
 ### Homework 1
 
 #### Output images

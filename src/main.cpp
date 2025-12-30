@@ -1055,19 +1055,26 @@ int main(int argc, char *argv[])
 
             std::vector<Light> lights;
             lights.push_back(Light{
-                {-10,  10,  -5},
-                0.1,
+                {-20,  30, -20},
+                0.2,
                 0.8,
                 0.5,
                 {255, 255, 255}
             });
-            lights.push_back({
-                { 10,   5,  -5},
-                0.05,
-                1,
-                0.2,
-                {100, 100, 255}
+
+            lights.push_back(Light{
+                { 20,  25,  10},
+                0.1,
+                0.7,
+                0.3,
+                {150, 150, 255}
             });
+
+            Material material;
+            material.k_ambient  = 0.3;
+            material.k_diffuse  = 0.6;
+            material.k_specular = 0.3;
+            material.shininess  = 10.0;
 
             for (int i = 0; i < c.frames; ++i) {
                 double t = (2.0 * M_PI * i) / c.frames;
@@ -1078,12 +1085,14 @@ int main(int argc, char *argv[])
                 // x = R*cos(t), z = R*sin(t)
                 cube1.center   = {orbit_radius * std::cos(t), 0.0, orbit_radius * std::sin(t)};
                 cube1.rotation = {0.0, t * 2.0, 0.0};
+                cube1.material = material;
 
                 SceneObject cube2;
                 cube2.type     = PerspectiveType::kThreePoint;
                 cube2.color    = {0, 255, 0};
                 cube2.center   = {orbit_radius * std::cos(t + M_PI), 0.0, orbit_radius * std::sin(t + M_PI)};
                 cube2.rotation = {t * 1.5, t * 0.5, 0.0};
+                cube2.material = material;
 
                 std::vector<SceneObject *> objects = {&cube1, &cube2};
                 std::ranges::sort(objects, [](SceneObject *a, SceneObject *b) { return a->center.z > b->center.z; });
@@ -1092,8 +1101,9 @@ int main(int argc, char *argv[])
                 auto res   = DoSmthWithImage(
                     fname,
                     [&](Image &img) {
+                        std::vector<double> z_buffer(img.WidthRgb() * img.HeightRgb(), 1e18);
                         for (auto obj : objects) {
-                            renderer.Render(img, cube_model, *obj, cam, lights);
+                            renderer.Render(img, cube_model, *obj, cam, lights, z_buffer);
                         }
                     },
                     600,

@@ -8,6 +8,7 @@ class Camera {
 public:
     Point3 position{0, 0, -10};
     double focal_length = 500.0;
+    double near_plane   = 0.1;
 
     Point2D Project(const Point3& p, size_t width, size_t height) const
     {

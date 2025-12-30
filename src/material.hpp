@@ -3,7 +3,7 @@
 namespace improcessing {
 
 struct Material {
-    double ka, kd, ks;
+    double k_ambient, k_diffuse, k_specular;
     double shininess;
 };
 

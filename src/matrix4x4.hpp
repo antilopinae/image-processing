@@ -61,7 +61,7 @@ struct Matrix4x4 {
         return res;
     }
 
-    Matrix4x4 operator*(const Matrix4x4 &o) const
+    Matrix4x4 operator*(const Matrix4x4& o) const
     {
         Matrix4x4 res;
         for (int i = 0; i < 4; i++) {
@@ -74,7 +74,7 @@ struct Matrix4x4 {
         return res;
     }
 
-    Point3 Transform(const Point3 &p) const
+    Point3 Transform(const Point3& p) const
     {
         double x = p.x * m[0][0] + p.y * m[0][1] + p.z * m[0][2] + m[0][3];
         double y = p.x * m[1][0] + p.y * m[1][1] + p.z * m[1][2] + m[1][3];

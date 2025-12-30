@@ -1,6 +1,7 @@
 #pragma once
 
 #include <image.hpp>
+#include <material.hpp>
 #include <point.hpp>
 
 namespace improcessing {
@@ -16,6 +17,7 @@ struct SceneObject {
     Point3 rotation;
     Pixel color;
     PerspectiveType type;
+    Material material;
 };
 
 } // namespace improcessing
