@@ -143,6 +143,11 @@ inline auto operator+(const Point3 &a, const Point3 &b) noexcept -> Point3
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
 
+inline auto operator+(const Point3 &p, double k) noexcept -> Point3
+{
+    return {p.x + k, p.y + k, p.z + k};
+}
+
 inline auto operator-(const Point3 &a, const Point3 &b) noexcept -> Point3
 {
     return {a.x - b.x, a.y - b.y, a.z - b.z};

@@ -7,6 +7,7 @@
 namespace improcessing {
 
 enum class PerspectiveType {
+    kOnePoint,
     kTwoPoint,
     kThreePoint
 };

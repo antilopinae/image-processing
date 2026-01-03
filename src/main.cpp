@@ -975,83 +975,81 @@ int main(int argc, char *argv[])
             return {};
         },
         [](const Laboratory5 &c) -> std::expected<void, boost::system::error_code> {
-            Point3 center(0, 0, 0);
-            Point3 size(150, 100, 80);
-            Point3 axis(c.axis_x, c.axis_y, c.axis_z);
-
-            for (int i = 0; i < c.frames; ++i) {
-                auto angle = (2.0 * M_PI * i) / c.frames;
-
-                auto fname_par = fmt::format("{}_parallel_{:03d}.png", c.output_prefix, i);
-                auto res       = DoSmthWithImage(
-                    fname_par,
-                    [&](Image &img) {
-                        RenderParallelepiped(img, center, size, axis, angle, ProjectionType::kParallel, c.k);
-                    },
-                    400,
-                    400);
-
-                if (!res) {
-                    return std::unexpected{res.error()};
-                }
-
-                auto fname_persp = fmt::format("{}_perspective_{:03d}.png", c.output_prefix, i);
-                res              = DoSmthWithImage(
-                    fname_persp,
-                    [&](Image &img) {
-                        RenderParallelepiped(img, center, size, axis, angle, ProjectionType::kPerspective, c.k);
-                    },
-                    400,
-                    400);
-
-                if (!res) {
-                    return std::unexpected{res.error()};
-                }
-            }
+            // Point3 center(0, 0, 0);
+            // Point3 size(150, 100, 80);
+            // Point3 axis(c.axis_x, c.axis_y, c.axis_z);
+            //
+            // for (int i = 0; i < c.frames; ++i) {
+            //     auto angle = (2.0 * M_PI * i) / c.frames;
+            //
+            //     auto fname_par = fmt::format("{}_parallel_{:03d}.png", c.output_prefix, i);
+            //     auto res       = DoSmthWithImage(
+            //         fname_par,
+            //         [&](Image &img) {
+            //             RenderParallelepiped(img, center, size, axis, angle, ProjectionType::kParallel, c.k);
+            //         },
+            //         400,
+            //         400);
+            //
+            //     if (!res) {
+            //         return std::unexpected{res.error()};
+            //     }
+            //
+            //     auto fname_persp = fmt::format("{}_perspective_{:03d}.png", c.output_prefix, i);
+            //     res              = DoSmthWithImage(
+            //         fname_persp,
+            //         [&](Image &img) {
+            //             RenderParallelepiped(img, center, size, axis, angle, ProjectionType::kPerspective, c.k);
+            //         },
+            //         400,
+            //         400);
+            //
+            //     if (!res) {
+            //         return std::unexpected{res.error()};
+            //     }
+            // }
 
             Camera cam;
-            cam.position     = {0, 0, -10};
-            cam.focal_length = 600.0;
+            cam.position     = {0, 0, -100};
+            cam.focal_length = 100.0;
 
             Cube cube_model(1.0);
             Renderer renderer;
 
-            double orbit_radius = 4.0;
-
-            for (int i = 0; i < c.frames; ++i) {
-                double t = (2.0 * M_PI * i) / c.frames;
-
-                SceneObject cube1;
-                cube1.type  = PerspectiveType::kTwoPoint;
-                cube1.color = {255, 0, 0};
-                // x = R*cos(t), z = R*sin(t)
-                cube1.center   = {orbit_radius * std::cos(t), 0.0, orbit_radius * std::sin(t)};
-                cube1.rotation = {0.0, t * 2.0, 0.0};
-
-                SceneObject cube2;
-                cube2.type     = PerspectiveType::kThreePoint;
-                cube2.color    = {0, 255, 0};
-                cube2.center   = {orbit_radius * std::cos(t + M_PI), 0.0, orbit_radius * std::sin(t + M_PI)};
-                cube2.rotation = {t * 1.5, t * 0.5, 0.0};
-
-                std::vector<SceneObject *> objects = {&cube1, &cube2};
-                std::ranges::sort(objects, [](SceneObject *a, SceneObject *b) { return a->center.z > b->center.z; });
-
-                auto fname = fmt::format("{}_{:03d}.png", c.output_prefix, i);
-                auto res   = DoSmthWithImage(
-                    fname,
-                    [&](Image &img) {
-                        for (auto *obj : objects) {
-                            renderer.Render(img, cube_model, *obj, cam);
-                        }
-                    },
-                    600,
-                    600);
-
-                if (!res) {
-                    return std::unexpected{res.error()};
-                }
-            }
+            // for (int i = 0; i < c.frames; ++i) {
+            //     double t = (2.0 * M_PI * i) / c.frames;
+            //
+            //     SceneObject cube1;
+            //     cube1.type  = PerspectiveType::kTwoPoint;
+            //     cube1.color = {255, 0, 0};
+            //     // x = R*cos(t), z = R*sin(t)
+            //     cube1.center   = {orbit_radius * std::cos(t), 0.0, orbit_radius * std::sin(t)};
+            //     cube1.rotation = {0.0, t * 2.0, 0.0};
+            //
+            //     SceneObject cube2;
+            //     cube2.type     = PerspectiveType::kThreePoint;
+            //     cube2.color    = {0, 255, 0};
+            //     cube2.center   = {orbit_radius * std::cos(t + M_PI), 0.0, orbit_radius * std::sin(t + M_PI)};
+            //     cube2.rotation = {t * 1.5, t * 0.5, 0.0};
+            //
+            //     std::vector<SceneObject *> objects = {&cube1, &cube2};
+            //     std::ranges::sort(objects, [](SceneObject *a, SceneObject *b) { return a->center.z > b->center.z; });
+            //
+            //     auto fname = fmt::format("{}_{:03d}.png", c.output_prefix, i);
+            //     auto res   = DoSmthWithImage(
+            //         fname,
+            //         [&](Image &img) {
+            //             for (auto *obj : objects) {
+            //                 renderer.Render(img, cube_model, *obj, cam);
+            //             }
+            //         },
+            //         600,
+            //         600);
+            //
+            //     if (!res) {
+            //         return std::unexpected{res.error()};
+            //     }
+            // }
 
             std::vector<Light> lights;
             lights.push_back(Light{
@@ -1077,7 +1075,8 @@ int main(int argc, char *argv[])
             material.shininess  = 10.0;
 
             for (int i = 0; i < c.frames; ++i) {
-                double t = (2.0 * M_PI * i) / c.frames;
+                auto orbit_radius = 4.0;
+                auto t            = (2.0 * M_PI * i) / c.frames;
 
                 SceneObject cube1;
                 cube1.type  = PerspectiveType::kTwoPoint;

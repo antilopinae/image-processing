@@ -20,99 +20,36 @@ struct VertexData {
 
 class Renderer {
 public:
-    const int INSIDE = 0 << 0; // 0000
-    const int LEFT   = 1 << 1; // 0001
-    const int RIGHT  = 1 << 2; // 0010
-    const int BOTTOM = 1 << 3; // 0100
-    const int TOP    = 1 << 4; // 1000
-
-    int ComputeCode(double x, double y, double width, double height)
+    Matrix4x4 CalculateProjectionMatrix(const SceneObject& obj, const Camera& cam)
     {
-        int code = INSIDE;
-        if (x < 0) {
-            code |= LEFT;
-        } else if (x >= width) {
-            code |= RIGHT;
+        auto P = Matrix4x4::Identity();
+
+        auto r = (cam.focal_length > 0) ? (1.0 / cam.focal_length) : 0.0;
+
+        if (obj.type == PerspectiveType::kOnePoint) {
+            P.m[2][3] = r;
+        } else if (obj.type == PerspectiveType::kTwoPoint) {
+            P.m[0][3] = r;
+            P.m[1][3] = r;
+        } else if (obj.type == PerspectiveType::kThreePoint) {
+            P.m[0][3] = r;
+            P.m[1][3] = r;
+            P.m[2][3] = r;
         }
-        if (y < 0) {
-            code |= BOTTOM;
-        } else if (y >= height) {
-            code |= TOP;
-        }
-        return code;
+        return P;
     }
 
-    void ClippedDrawLine(Image& img, Point p1_raw, Point p2_raw, Pixel color)
+    Matrix4x4 CalculateModelMatrix(const SceneObject& obj)
     {
-        double x1 = p1_raw.x, y1 = p1_raw.y;
-        double x2 = p2_raw.x, y2 = p2_raw.y;
-        double w = (double)img.WidthRgb();
-        double h = (double)img.HeightRgb();
+        auto T = Matrix4x4::Translation(obj.center.x, obj.center.y, obj.center.z);
 
-        while (true) {
-            int code1 = ComputeCode(x1, y1, w, h);
-            int code2 = ComputeCode(x2, y2, w, h);
+        const auto rx = Matrix4x4::RotationX(obj.rotation.x);
+        const auto ry = Matrix4x4::RotationY(obj.rotation.y);
+        const auto rz = Matrix4x4::RotationZ(obj.rotation.z);
 
-            if ((code1 | code2) == 0) {
-                DrawLine(img, {(size_t)x1, (size_t)y1}, {(size_t)x2, (size_t)y2}, color);
-                break;
-            } else if (code1 & code2) {
-                break;
-            } else {
-                int codeOut = code1 ? code1 : code2;
-                double x, y;
+        auto R = rz * ry * rx;
 
-                if (codeOut & TOP) {
-                    x = x1 + (x2 - x1) * (h - 1 - y1) / (y2 - y1);
-                    y = h - 1;
-                } else if (codeOut & BOTTOM) {
-                    x = x1 + (x2 - x1) * (0 - y1) / (y2 - y1);
-                    y = 0;
-                } else if (codeOut & RIGHT) {
-                    y = y1 + (y2 - y1) * (w - 1 - x1) / (x2 - x1);
-                    x = w - 1;
-                } else { // LEFT
-                    y = y1 + (y2 - y1) * (0 - x1) / (x2 - x1);
-                    x = 0;
-                }
-
-                if (codeOut == code1) {
-                    x1 = x;
-                    y1 = y;
-                } else {
-                    x2 = x;
-                    y2 = y;
-                }
-            }
-        }
-    }
-
-    void Render(Image& img, const Cube& cube, const SceneObject& settings, const Camera& cam)
-    {
-        Matrix4x4 modelMatrix = CalculateModelMatrix(settings);
-
-        std::vector<Point> projected_points;
-
-        for (const auto& v : cube.vertices) {
-            Point3 p = modelMatrix.Transform(v);
-            p.x += settings.center.x;
-            p.y += settings.center.y;
-            p.z += settings.center.z;
-
-            double z_eff = p.z - cam.position.z;
-            if (z_eff < 0.1) {
-                z_eff = 0.1;
-            }
-
-            double x_scr = (img.WidthRgb() / 2.0) + (p.x * cam.focal_length) / z_eff;
-            double y_scr = (img.HeightRgb() / 2.0) - (p.y * cam.focal_length) / z_eff;
-
-            projected_points.push_back({x_scr, y_scr});
-        }
-
-        for (const auto& edge : cube.edges) {
-            ClippedDrawLine(img, projected_points[edge.start], projected_points[edge.end], settings.color);
-        }
+        return T * R;
     }
 
     void Render(Image& img,
@@ -123,6 +60,8 @@ public:
                 std::vector<double>& z_buffer)
     {
         auto modelMatrix = CalculateModelMatrix(settings);
+        auto viewM       = Matrix4x4::Translation(-cam.position.x, -cam.position.y, -cam.position.z);
+        auto projM       = CalculateProjectionMatrix(settings, cam);
 
         for (const auto& face : cube.faces) {
             std::vector<VertexData> faceVertices;
@@ -130,9 +69,8 @@ public:
             for (auto i = 0; i < 4; ++i) {
                 VertexData v;
                 auto local_p = cube.vertices[face.indices[i]];
-                v.world_pos  = modelMatrix.Transform(local_p);
-                v.world_pos  = v.world_pos + settings.center;
 
+                v.world_pos = modelMatrix.Transform(local_p);
                 faceVertices.push_back(v);
             }
 
@@ -144,26 +82,34 @@ public:
                 v.normal = face_normal;
             }
 
-            std::vector<VertexData> clippedPolygon = ClipPolygonToNearPlane(faceVertices,
-                                                                            cam.position.z + cam.near_plane);
-
-            if (clippedPolygon.size() < 3) {
+            auto clipped = ClipPolygonToNearPlane(faceVertices, cam.position.z + cam.near_plane);
+            if (clipped.size() < 3) {
                 continue;
             }
 
-            for (auto& v : clippedPolygon) {
-                auto z_eff     = v.world_pos.z - cam.position.z;
-                v.screen_pos.x = (img.WidthRgb() / 2.0) + (v.world_pos.x * cam.focal_length) / z_eff;
-                v.screen_pos.y = (img.HeightRgb() / 2.0) - (v.world_pos.y * cam.focal_length) / z_eff;
-                v.screen_pos.z = z_eff;
+            for (auto& v : clipped) {
+                auto p_view = v.world_pos - cam.position;
+
+                auto X = p_view.x;
+                auto Y = p_view.y;
+                auto Z = p_view.z;
+                auto H = X * projM.m[0][3] + Y * projM.m[1][3] + Z * projM.m[2][3] + 1.0;
+
+                // x' = X/H, y' = Y/H
+                auto x_norm = X / H;
+                auto y_norm = Y / H;
+
+                v.screen_pos.x = (img.WidthRgb() / 2.0) + x_norm * cam.focal_length;
+                v.screen_pos.y = (img.HeightRgb() / 2.0) - y_norm * cam.focal_length;
+                v.screen_pos.z = Z;
             }
 
-            for (size_t i = 1; i < clippedPolygon.size() - 1; ++i) {
+            for (size_t i = 1; i < clipped.size() - 1; ++i) {
                 RasterizeTriangle(img,
                                   z_buffer,
-                                  clippedPolygon[0],
-                                  clippedPolygon[i],
-                                  clippedPolygon[i + 1],
+                                  clipped[0],
+                                  clipped[i],
+                                  clipped[i + 1],
                                   lights,
                                   settings,
                                   cam.position);
@@ -191,10 +137,6 @@ public:
         auto invZ1 = 1.0 / v1.screen_pos.z;
         auto invZ2 = 1.0 / v2.screen_pos.z;
 
-        auto pZ0 = v0.world_pos * invZ0;
-        auto pZ1 = v1.world_pos * invZ1;
-        auto pZ2 = v2.world_pos * invZ2;
-
         for (auto y = minY; y <= maxY; ++y) {
             for (auto x = minX; x <= maxX; ++x) {
                 auto bary =
@@ -208,7 +150,7 @@ public:
                     if (z < z_buffer[idx]) {
                         z_buffer[idx] = z;
 
-                        auto p = (pZ0 * bary.x + pZ1 * bary.y + pZ2 * bary.z) * z;
+                        auto p = v0.world_pos * bary.x + v1.world_pos * bary.y + v2.world_pos * bary.z;
 
                         auto pix              = ComputePhong(p, v0.normal, lights, obj, viewPos);
                         img.GetRGBPixel(x, y) = pix;
@@ -296,23 +238,6 @@ public:
         auto w = (v0.x * v2.y - v2.x * v0.y) / den;
         auto u = 1.0 - v - w;
         return {u, v, w};
-    }
-
-    Matrix4x4 CalculateModelMatrix(const SceneObject& obj)
-    {
-        Matrix4x4 rot = Matrix4x4::Identity();
-
-        if (obj.type == PerspectiveType::kTwoPoint) {
-            rot = Matrix4x4::RotationY(obj.rotation.y);
-        } else if (obj.type == PerspectiveType::kThreePoint) {
-            const Matrix4x4 rx = Matrix4x4::RotationX(obj.rotation.x);
-            const Matrix4x4 ry = Matrix4x4::RotationY(obj.rotation.y);
-            const Matrix4x4 rz = Matrix4x4::RotationZ(obj.rotation.z);
-
-            rot = rz * ry * rx;
-        }
-
-        return rot;
     }
 };
 
